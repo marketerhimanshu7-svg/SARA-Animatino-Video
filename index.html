@@ -1,13 +1,1836 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Connect & Grow CRM</title>
-    <meta name="description" content="Connect & Grow — Sales & BD CRM Suite" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PharmaNET</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #0a0e1a;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Noise overlay ────────────────────────── */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0.022;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 512px 512px;
+}
+
+/* ─── Sky background ──────────────────────── */
+#bg {
+  position: fixed; inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  will-change: transform;
+  background: #0a0e1a;
+  background-image: radial-gradient(ellipse at 50% 40%, #161d33 0%, #0e1424 55%, #070a14 100%);
+}
+
+/* Atmospheric glow orbs — sky-appropriate */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(90px);
+}
+
+#orb-sun {
+  width: 760px; height: 680px;
+  top: -22%; right: -12%;
+  background: radial-gradient(circle at 45% 45%, rgba(255,90,70,0.30) 0%, rgba(220,50,50,0.12) 45%, transparent 68%);
+  animation: pulse1 14s ease-in-out infinite;
+}
+#orb-deep {
+  width: 680px; height: 680px;
+  bottom: -15%; left: -8%;
+  background: radial-gradient(circle at 50% 50%, rgba(255,150,40,0.18) 0%, transparent 68%);
+  animation: pulse2 17s ease-in-out infinite;
+}
+#orb-white {
+  width: 500px; height: 440px;
+  top: 22%; left: 2%;
+  background: radial-gradient(circle at 50% 50%, rgba(120,110,255,0.26) 0%, transparent 70%);
+  animation: pulse3 20s ease-in-out infinite;
+}
+#orb-horizon {
+  width: 560px; height: 380px;
+  bottom: 10%; right: 10%;
+  background: radial-gradient(circle at 50% 50%, rgba(220,60,90,0.22) 0%, transparent 68%);
+  animation: pulse4 16s ease-in-out infinite;
+}
+
+@keyframes pulse1 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  35%     { transform: translate(-40px,30px) scale(1.09); }
+  68%     { transform: translate(20px,-22px) scale(0.95); }
+}
+@keyframes pulse2 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  42%     { transform: translate(50px,-42px) scale(1.11); }
+  72%     { transform: translate(-28px,25px) scale(0.93); }
+}
+@keyframes pulse3 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  50%     { transform: translate(58px,-50px) scale(1.16); }
+}
+@keyframes pulse4 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  47%     { transform: translate(-50px,38px) scale(1.07); }
+}
+
+/* ─── Clouds (retired — clinical/network look) ── */
+.cloud {
+  position: absolute;
+  pointer-events: none;
+  display: none;
+}
+/* Each cloud is built from a base pill + floating circles on top */
+.cloud-base {
+  position: absolute;
+  background: rgba(255,255,255,0.72);
+  border-radius: 100px;
+}
+.cloud-puff {
+  position: absolute;
+  background: rgba(255,255,255,0.78);
+  border-radius: 50%;
+}
+/* Wispy shadow beneath each cloud */
+.cloud-shadow {
+  position: absolute;
+  background: rgba(100,160,210,0.10);
+  border-radius: 100px;
+  filter: blur(6px);
+}
+
+/* drift animations (continue through GSAP freeze) */
+@keyframes drift1 { 0%,100%{transform:translateX(0)}  50%{transform:translateX(55px)} }
+@keyframes drift2 { 0%,100%{transform:translateX(0)}  50%{transform:translateX(-45px)} }
+@keyframes drift3 { 0%,100%{transform:translateX(0)}  50%{transform:translateX(40px)} }
+@keyframes drift4 { 0%,100%{transform:translateX(0)}  50%{transform:translateX(-35px)} }
+@keyframes drift5 { 0%,100%{transform:translateX(0)}  50%{transform:translateX(30px)} }
+
+#cloud1 { left: -3%;  top:  3%;  animation: drift1 80s ease-in-out infinite; }
+#cloud2 { right: 2%;  top:  7%;  animation: drift2 95s ease-in-out infinite; }
+#cloud3 { left: 28%;  top:  1%;  animation: drift3 110s ease-in-out infinite; }
+#cloud4 { left:  4%;  top: 42%;  animation: drift4 70s ease-in-out infinite; }
+#cloud5 { right: 18%; top: 28%;  animation: drift5 88s ease-in-out infinite; }
+
+/* ─── Grid canvas ──────────────────────────── */
+#grid-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  opacity: 1;
+}
+
+/* ─── World (camera container) ─────────────── */
+#world {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  z-index: 10;
+  transform-origin: 50% 50%;
+  overflow: hidden;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* ─── SVG connector layer ──────────────────── */
+#svg-conn {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* ─── Glassmorphism cards — light sky edition ─ */
+.card {
+  position: absolute;
+  width: 244px;
+  /* solid faux-glass — no backdrop-filter (kills per-frame repaint flicker) */
+  background: linear-gradient(180deg, #ffffff 0%, #f4f8fd 100%);
+  border: 1px solid rgba(150,185,225,0.5);
+  border-radius: 18px;
+  padding: 18px 20px 16px 20px;
+  box-shadow:
+    0 18px 48px rgba(20,70,140,0.13),
+    0 3px 12px rgba(20,70,140,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  transform-origin: center center;
+  z-index: 30;
+}
+
+/* inner top highlight */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 15%; right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,1), transparent);
+  border-radius: 1px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 13px;
+}
+.card-type {
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  color: rgba(20,70,140,0.42);
+}
+.card-menu { display: flex; gap: 3.5px; }
+.card-menu span {
+  display: block;
+  width: 3.5px; height: 3.5px;
+  border-radius: 50%;
+  background: rgba(20,70,140,0.14);
+}
+
+.card-icon {
+  width: 40px; height: 40px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 13px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.card-icon::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0.15);
+  border-radius: inherit;
+}
+
+.card-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1a3a5c;
+  margin-bottom: 4px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.card-sub {
+  font-size: 10px;
+  color: rgba(20,70,140,0.42);
+  margin-bottom: 13px;
+  letter-spacing: 0.01em;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 11px;
+  border-top: 1px solid rgba(20,70,140,0.08);
+}
+.card-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.card-stat {
+  font-size: 9.5px;
+  color: rgba(20,70,140,0.40);
+  letter-spacing: 0.02em;
+}
+.card-accent { position: absolute; top: 0; left: 0; right: 0; height: 4px; border-radius: 18px 18px 0 0; opacity: 0.92; }
+.card-spark2 { display: block; width: 100%; height: 28px; margin-top: 10px; overflow: visible; }
+
+.card-badge {
+  position: absolute;
+  top: -8px; right: -8px;
+  padding: 3.5px 8px;
+  border-radius: 100px;
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 4px 14px rgba(239,68,68,0.45), 0 0 0 1.5px rgba(255,255,255,0.6);
+  opacity: 0;
+  transform: scale(0.4);
+  will-change: transform, opacity;
+}
+
+/* ─── Status chips — light edition ─────────── */
+.chip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 15px;
+  border-radius: 100px;
+  background: #ffffff;
+  border: 1px solid rgba(150,185,225,0.5);
+  transform: translateZ(0);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(20,70,140,0.72);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  white-space: nowrap;
+  box-shadow: 0 6px 24px rgba(30,100,180,0.12), 0 1px 4px rgba(30,100,180,0.08);
+  z-index: 30;
+}
+.chip-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ─── Counters ─────────────────────────────── */
+.counter {
+  position: absolute;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  color: rgba(20,70,140,0.28);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 30;
+}
+
+/* ─── Dust particles ───────────────────────── */
+.dust {
+  position: fixed;
+  pointer-events: none;
+  will-change: transform, opacity;
+  z-index: 5;
+  border-radius: 50%;
+}
+
+/* ─── Storm overlay ─────────────────────────── */
+#storm-overlay {
+  position: fixed; inset: 0; z-index: 2;
+  pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at 50% 42%,
+    transparent 28%,
+    rgba(40,6,10,0.5) 78%,
+    rgba(8,2,5,0.82) 100%
+  );
+}
+
+/* ─── PharmaNET pulse ring ──────────────────── */
+#pn-pulse {
+  position: fixed; z-index: 55; pointer-events: none;
+  top: 50%; left: 50%;
+  width: 100px; height: 100px; border-radius: 50%;
+  margin: -50px 0 0 -50px;
+  border: 2.5px solid rgba(30,140,255,0.95);
+  box-shadow: 0 0 28px rgba(30,140,255,0.5), inset 0 0 14px rgba(30,140,255,0.2);
+  opacity: 0; transform: scale(0);
+}
+
+/* ─── Final frame ───────────────────────────── */
+#final-frame {
+  position: fixed; inset: 0; z-index: 160;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 0;
+  opacity: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 45%,
+    rgba(238,244,251,0.78) 0%,
+    rgba(220,233,247,0.90) 55%,
+    rgba(200,220,240,0.94) 100%
+  );
+}
+.ff-title {
+  font-size: clamp(2.4rem, 5.5vw, 4.2rem);
+  font-weight: 700; color: #12365c;
+  letter-spacing: -0.025em; line-height: 1.1;
+  opacity: 0; transform: translateY(16px);
+}
+.ff-arrow {
+  font-size: 1.2rem; color: rgba(46,111,181,0.5);
+  margin: 0.55rem 0; opacity: 0;
+  transform: translateY(8px);
+}
+.ff-sub {
+  font-size: clamp(0.95rem, 2vw, 1.35rem);
+  color: rgba(30,80,140,0.78);
+  font-weight: 500; letter-spacing: 0.005em;
+  opacity: 0; transform: translateY(14px);
+  margin: 0.15rem 0;
+}
+#ff-cta {
+  margin-top: 2.6rem;
+  padding: 0.9rem 2.6rem;
+  background: linear-gradient(135deg, #1a6fd8 0%, #0ea5e9 100%);
+  color: #fff; font-size: 1.05rem; font-weight: 600;
+  border-radius: 50px; border: none; cursor: pointer;
+  opacity: 0; transform: translateY(14px);
+  box-shadow: 0 0 32px rgba(14,165,233,0.38);
+  letter-spacing: 0.01em;
+}
+
+/* ─── Stage 4-6 additions ───────────────────── */
+.card-prog-wrap {
+  height: 3px; background: rgba(0,0,0,0.07); border-radius: 4px;
+  margin-top: 9px; overflow: hidden;
+}
+.card-prog-fill { height: 100%; width: 0%; border-radius: 4px; transition: none; }
+.card-spark { display: block; width: 100%; height: 30px; margin-top: 9px; overflow: visible; }
+.module-label {
+  position: absolute; z-index: 40; pointer-events: none;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+  color: rgba(20,70,140,0.66); opacity: 0; white-space: nowrap;
+  background: #ffffff;
+  padding: 4px 10px; border-radius: 20px;
+  border: 1px solid rgba(20,70,140,0.14);
+  box-shadow: 0 2px 8px rgba(20,70,140,0.10);
+}
+
+/* ─── 3D Dashboard (the 6 cards merge into this) ─ */
+#dash-stage {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  perspective: 1300px; pointer-events: none;
+  opacity: 0; z-index: 40;
+}
+/* tilt applied via GSAP (rotationX/Y/Z) so breathing tweens never flatten it */
+#dashboard {
+  width: 1180px; max-width: 94vw;
+  background: #ffffff; border-radius: 24px;
+  padding: 30px 34px 34px;
+  border: 1px solid rgba(150,170,210,0.30);
+  box-shadow: 0 60px 120px rgba(40,60,110,0.26), 0 16px 40px rgba(40,60,110,0.14);
+  transform-style: preserve-3d;
+  position: relative;
+}
+.dash-header { display:flex; justify-content:space-between; align-items:flex-end;
+  margin-bottom:22px; padding-bottom:18px; border-bottom:1px solid rgba(20,60,120,0.08); }
+.dash-h-l { display:flex; flex-direction:column; gap:5px; }
+.dash-h-title { font-size:23px; font-weight:700; color:#16335a; letter-spacing:-0.02em; }
+.dash-h-meta { font-size:12.5px; color:#6b83a4; font-weight:500; }
+.dash-h-chip { font-size:12px; font-weight:600; color:#2e6fb5; background:#eef4fb;
+  padding:7px 16px; border-radius:20px; display:flex; align-items:center; gap:8px; }
+.dash-h-chip i { width:7px; height:7px; border-radius:50%; background:#2e9b6a; display:block; }
+.dash-body { display:flex; gap:30px; }
+.dash-toolbar { display:flex; align-items:center; gap:16px; margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid rgba(20,60,120,0.07); }
+.dt-brand { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:800; color:#16335a; letter-spacing:-0.01em; }
+.dt-logo { width:20px; height:20px; border-radius:6px; background:linear-gradient(135deg,#5b6ce0,#0ea5e9); box-shadow:0 2px 8px rgba(46,111,181,0.4); }
+.dt-search { flex:1; max-width:340px; font-size:12px; color:#9aabc4; background:#f3f6fb; border:1px solid rgba(20,60,120,0.08); border-radius:9px; padding:9px 14px; }
+.dt-tabs { display:flex; gap:6px; margin-left:auto; }
+.dt-tabs span { font-size:12px; font-weight:600; color:#7088a6; padding:7px 13px; border-radius:8px; }
+.dt-tabs span.on { color:#1a6fd8; background:#eaf2fd; }
+.dt-avatar { width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,#6e7fc0,#3e6ca8); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+.dash-rail { flex:0 0 50px; display:flex; flex-direction:column; gap:10px; padding-top:28px; }
+.rail-ico { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#8fa3bf; background:#f3f6fb; }
+.rail-ico svg { width:18px; height:18px; }
+.rail-ico.on { color:#fff; background:linear-gradient(135deg,#1a6fd8,#0ea5e9); box-shadow:0 6px 16px rgba(26,111,216,0.35); }
+.kpi-top { display:flex; align-items:baseline; gap:8px; }
+.kpi-tr { font-size:10px; font-weight:700; }
+.kpi-tr.up { color:#2e9b6a; }
+.kpi-tr.down { color:#dc2626; }
+.dash-left { flex:0 0 440px; }
+.dash-right { flex:1; display:flex; flex-direction:column; gap:16px; }
+.dash-sec { font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;
+  color:#90a3bf; margin-bottom:4px; }
+.dash-row { display:flex; align-items:center; justify-content:space-between;
+  padding:13px 10px; border-bottom:1px solid rgba(20,60,120,0.07); opacity:0;
+  border-radius:9px; transition:background 0.2s, transform 0.12s, filter 0.12s; }
+.dash-row-name { display:flex; align-items:center; gap:13px; font-size:15px; font-weight:600; color:#1e3c5c; }
+.dash-ico { width:28px; height:28px; border-radius:8px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; }
+.dash-caret { width:9px; height:9px; margin-right:-4px; opacity:0.4; flex-shrink:0; }
+.dash-badge { font-size:10.5px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase;
+  padding:4px 12px; border-radius:20px; border:1px solid; white-space:nowrap; }
+.b-sev  { color:#dc2626; border-color:rgba(220,38,38,0.40); }
+.b-high { color:#e0603a; border-color:rgba(224,96,58,0.40); }
+.b-med  { color:#d39a2a; border-color:rgba(211,154,42,0.42); }
+.b-low  { color:#3e6ca8; border-color:rgba(62,108,168,0.42); }
+.b-live { color:#2e9b6a; border-color:rgba(46,155,106,0.42); }
+.dash-sub { overflow:hidden; height:0; }
+.dash-subrow { display:flex; align-items:center; justify-content:space-between;
+  padding:11px 10px 11px 34px; opacity:0; }
+.dash-subrow .dash-row-name { font-weight:500; font-size:13px; color:#52708f; }
+.dash-subrow .dash-row-ico { width:7px; height:7px; border-radius:50%; background:#dc2626; flex-shrink:0; }
+.dash-row.hovered, .dash-subrow.hovered { background:rgba(46,111,181,0.08); }
+.dash-row.pressed { transform:scale(0.985); filter:brightness(0.96); }
+.dash-chart-wrap { background:#fbfcfe; border:1px solid rgba(20,60,120,0.08); border-radius:14px; padding:16px 18px 12px; }
+.dash-chart-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.dash-chart-title { font-size:13px; font-weight:600; color:#46618a; }
+.dash-chart-cal { font-size:11px; font-weight:600; color:#8b6fd0; }
+.dash-kpis { display:flex; gap:14px; }
+.kpi { flex:1; background:#fbfcfe; border:1px solid rgba(20,60,120,0.08); border-radius:12px; padding:13px 15px; }
+.kpi-num { font-size:19px; font-weight:700; color:#16335a; }
+.kpi-num.warn { color:#dc2626; }
+.kpi-lbl { font-size:10.5px; color:#7088a6; margin-top:2px; }
+.dash-floats { position:absolute; top:-30px; right:34px; display:flex; gap:12px; transform:translateZ(55px); }
+.stat-card { background:#fff; border-radius:14px; padding:12px 18px; opacity:0; text-align:left;
+  box-shadow:0 22px 48px rgba(40,60,110,0.22); border:1px solid rgba(150,170,210,0.3); }
+.stat-num { font-size:22px; font-weight:700; color:#16335a; line-height:1.05; }
+.stat-num.sev { color:#dc2626; }
+.stat-lbl { font-size:10px; color:#7088a6; letter-spacing:0.02em; margin-top:3px; }
+
+/* ─── Drill-down detail view (lives inside #dashboard) ─ */
+#detail-view { position:absolute; inset:0; background:#ffffff; border-radius:24px;
+  padding:30px 34px; opacity:0; display:flex; flex-direction:column; }
+.dv-top { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+.dv-back { width:26px; height:26px; border-radius:7px; border:1px solid rgba(20,60,120,0.16);
+  display:flex; align-items:center; justify-content:center; color:#46618a; font-size:14px; }
+.dv-title { font-size:25px; font-weight:700; color:#16335a; letter-spacing:-0.02em; }
+.dv-sub { font-size:12.5px; color:#6b83a4; margin-bottom:22px; padding-left:38px; }
+.dv-floats { position:absolute; top:-26px; left:34px; display:flex; gap:12px; transform:translateZ(60px); }
+.dv-stat { background:#fff; border-radius:14px; padding:13px 20px; min-width:118px;
+  box-shadow:0 22px 50px rgba(40,60,110,0.20); border:1px solid rgba(150,170,210,0.3); }
+.dv-stat .n { font-size:24px; font-weight:700; color:#16335a; }
+.dv-stat .n.sev { color:#dc2626; }
+.dv-stat .l { font-size:10.5px; color:#7088a6; margin-top:3px; }
+.dv-body { display:flex; gap:26px; flex:1; }
+.dv-left { flex:1.15; }
+.dv-right { flex:1; display:flex; flex-direction:column; }
+.dv-facts { display:flex; flex-direction:column; margin-top:6px; }
+.dv-fact { display:flex; justify-content:space-between; align-items:center;
+  padding:11px 0; border-bottom:1px solid rgba(20,60,120,0.07); }
+.dv-fact .k { font-size:12.5px; color:#6b83a4; }
+.dv-fact .v { font-size:13.5px; font-weight:600; color:#1e3c5c; }
+.dv-fact .v.sev { color:#dc2626; }
+.dv-sources { display:flex; gap:6px; }
+.dv-src { font-size:10px; font-weight:600; color:#46618a; background:#eef4fb;
+  border:1px solid rgba(46,111,181,0.18); border-radius:6px; padding:3px 8px; }
+.dv-reco { margin-top:16px; background:linear-gradient(135deg,#1a6fd8,#0ea5e9);
+  border-radius:16px; padding:18px 20px; color:#fff; box-shadow:0 18px 44px rgba(14,120,210,0.35); }
+.dv-reco-h { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700;
+  letter-spacing:0.08em; text-transform:uppercase; opacity:0.92; margin-bottom:7px; }
+.dv-reco-t { font-size:15.5px; font-weight:600; line-height:1.4; }
+.dv-reco-m { font-size:12px; opacity:0.9; margin-top:6px; }
+.dv-reco-btn { margin-top:14px; display:inline-block; background:rgba(255,255,255,0.18);
+  border:1px solid rgba(255,255,255,0.5); border-radius:10px; padding:9px 18px;
+  font-size:12.5px; font-weight:600; }
+
+/* driven cursor — fixed so the camera transform never doubles it */
+#cursor { position:fixed; left:0; top:0; z-index:170; width:26px; height:32px;
+  pointer-events:none; opacity:0; filter:drop-shadow(0 4px 5px rgba(0,0,0,0.34)); }
+
+/* ─── Problem-statement text beats ─────────────── */
+#story { position: fixed; inset: 0; z-index: 90; pointer-events: none; }
+.story-line { position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%); width: 92%; text-align: center; }
+#story-punchwrap { top: 73%; }
+.story-scrim { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  width: 150%; height: 360%; pointer-events: none; opacity: 0; z-index: -1;
+  background: radial-gradient(ellipse at 50% 50%, rgba(6,8,18,0.88) 0%, rgba(6,8,18,0.5) 42%, transparent 72%); }
+.story-kicker { font-size: clamp(1.4rem, 3.4vw, 2.7rem); font-weight: 700; color: #fff;
+  letter-spacing: -0.02em; line-height: 1.2; opacity: 0; transform: translateY(18px);
+  text-shadow: 0 4px 34px rgba(0,0,0,0.6); }
+.story-kicker i { font-style: normal; background: linear-gradient(90deg,#ff8a5a,#ffd36a);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.story-punch { font-size: clamp(2rem, 5.4vw, 4.3rem); font-weight: 800; letter-spacing: -0.03em;
+  line-height: 1.04; opacity: 0; transform: translateY(20px);
+  background: linear-gradient(90deg,#ff6b6b,#ff9a5a); -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: 0 8px 50px rgba(255,70,70,0.22); }
+.story-sub { font-size: clamp(1rem, 2.5vw, 1.7rem); font-weight: 600; color: rgba(255,255,255,0.84);
+  margin-top: 0.85rem; opacity: 0; transform: translateY(14px); text-shadow: 0 3px 24px rgba(0,0,0,0.5); }
+
+/* hero risk meter — corner HUD */
+#risk-meter { position: fixed; left: 5.5%; top: 9%; z-index: 88; text-align: left;
+  opacity: 0; pointer-events: none; }
+.rm-num { font-size: clamp(1.7rem, 4.2vw, 3.1rem); font-weight: 800; color: #ff5a5a;
+  letter-spacing: -0.01em; font-variant-numeric: tabular-nums; text-shadow: 0 4px 34px rgba(255,60,60,0.45); }
+.rm-lbl { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(255,150,150,0.85); margin-top: 3px; }
+
+/* failed-handshake label */
+.fail-x { position: absolute; z-index: 36; pointer-events: none; white-space: nowrap;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.1em; color: #ff6a6a;
+  background: rgba(38,8,12,0.62); border: 1px solid rgba(255,90,90,0.5);
+  padding: 4px 9px; border-radius: 20px; box-shadow: 0 4px 16px rgba(255,40,40,0.28); }
+.fail-x .fx-i { margin-right: 3px; }
+</style>
+</head>
+<body>
+
+<!-- Sky background -->
+<div id="bg">
+  <div class="orb" id="orb-sun"></div>
+  <div class="orb" id="orb-deep"></div>
+  <div class="orb" id="orb-white"></div>
+  <div class="orb" id="orb-horizon"></div>
+
+  <!-- ── Cloud 1: large left ───────────────── -->
+  <div class="cloud" id="cloud1">
+    <div class="cloud-shadow" style="width:360px;height:22px;bottom:-10px;left:10px;"></div>
+    <div class="cloud-base" style="width:360px;height:68px;top:50px;left:0;"></div>
+    <div class="cloud-puff" style="width:170px;height:150px;top:-30px;left:50px;"></div>
+    <div class="cloud-puff" style="width:130px;height:110px;top:-15px;left:180px;"></div>
+    <div class="cloud-puff" style="width:100px;height:90px;top: -5px;left:22px;"></div>
+    <div class="cloud-puff" style="width:80px;height:75px;top:-8px;left:280px;"></div>
+  </div>
+
+  <!-- ── Cloud 2: medium right ─────────────── -->
+  <div class="cloud" id="cloud2">
+    <div class="cloud-shadow" style="width:260px;height:18px;bottom:-8px;left:8px;opacity:0.7;"></div>
+    <div class="cloud-base" style="width:280px;height:55px;top:38px;left:0;"></div>
+    <div class="cloud-puff" style="width:130px;height:120px;top:-28px;left:40px;"></div>
+    <div class="cloud-puff" style="width:100px;height:90px;top:-14px;left:148px;"></div>
+    <div class="cloud-puff" style="width:75px;height:65px;top: -5px;left:10px;"></div>
+  </div>
+
+  <!-- ── Cloud 3: small top-center ─────────── -->
+  <div class="cloud" id="cloud3">
+    <div class="cloud-base" style="width:190px;height:40px;top:30px;left:0;"></div>
+    <div class="cloud-puff" style="width:95px;height:88px;top:-22px;left:30px;"></div>
+    <div class="cloud-puff" style="width:70px;height:62px;top:-10px;left:108px;"></div>
+    <div class="cloud-puff" style="width:55px;height:50px;top: -4px;left:8px;"></div>
+  </div>
+
+  <!-- ── Cloud 4: faint left-mid ───────────── -->
+  <div class="cloud" id="cloud4" style="opacity:0.6;">
+    <div class="cloud-base" style="width:300px;height:52px;top:35px;left:0;background:rgba(255,255,255,0.55);"></div>
+    <div class="cloud-puff" style="width:140px;height:125px;top:-25px;left:38px;background:rgba(255,255,255,0.60);"></div>
+    <div class="cloud-puff" style="width:108px;height:95px;top:-12px;left:160px;background:rgba(255,255,255,0.58);"></div>
+    <div class="cloud-puff" style="width:85px;height:72px;top: -6px;left:12px;background:rgba(255,255,255,0.55);"></div>
+  </div>
+
+  <!-- ── Cloud 5: wispy right-mid ──────────── -->
+  <div class="cloud" id="cloud5" style="opacity:0.55;">
+    <div class="cloud-base" style="width:220px;height:36px;top:28px;left:0;background:rgba(255,255,255,0.58);"></div>
+    <div class="cloud-puff" style="width:110px;height:100px;top:-24px;left:28px;background:rgba(255,255,255,0.62);"></div>
+    <div class="cloud-puff" style="width:80px;height:72px;top:-12px;left:128px;background:rgba(255,255,255,0.58);"></div>
+  </div>
+
+  <canvas id="grid-canvas"></canvas>
+</div>
+
+<!-- World — camera drift target -->
+<div id="world">
+
+  <!-- SVG connector layer -->
+  <svg id="svg-conn" xmlns="http://www.w3.org/2000/svg">
+    <defs></defs>
+  </svg>
+
+  <!-- ── CARDS ──────────────────────────────── -->
+
+  <!-- EMAIL -->
+  <div class="card" id="c-email">
+    <div class="card-header">
+      <span class="card-type">Email</span>
+      <div class="card-menu"><span></span><span></span><span></span></div>
+    </div>
+    <div class="card-icon" style="background:linear-gradient(135deg,#2E6FB5,#5B9BD8);">
+      <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
+        <rect x="2" y="4" width="16" height="12" rx="2.5" stroke="rgba(255,255,255,0.92)" stroke-width="1.5"/>
+        <path d="M2.5 5.5 L10 11 L17.5 5.5" stroke="rgba(255,255,255,0.92)" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="card-title">Purchase Order</div>
+    <div class="card-sub">supplier@pharmaco.com</div>
+    <div class="card-footer">
+      <div class="card-dot" style="background:#2E6FB5;box-shadow:0 0 6px rgba(46,111,181,0.6);"></div>
+      <span class="card-stat">Unread · 2 min ago</span>
+    </div>
+    <div class="card-badge" id="badge-email">Waiting</div>
+  </div>
+
+  <!-- PDF -->
+  <div class="card" id="c-pdf">
+    <div class="card-header">
+      <span class="card-type">PDF</span>
+      <div class="card-menu"><span></span><span></span><span></span></div>
+    </div>
+    <div class="card-icon" style="background:linear-gradient(135deg,#3C7E96,#6FAEC2);">
+      <svg width="15" height="18" viewBox="0 0 15 19" fill="none">
+        <rect x="1" y="1" width="13" height="17" rx="2.5" stroke="rgba(255,255,255,0.92)" stroke-width="1.5"/>
+        <path d="M4 7h7M4 10.5h5M4 13.5h6" stroke="rgba(255,255,255,0.7)" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="card-title">Invoice #4821</div>
+    <div class="card-sub">Q3 Supplier · Unmatched</div>
+    <div class="card-footer">
+      <div class="card-dot" style="background:#FFA45A;box-shadow:0 0 6px rgba(255,164,90,0.7);"></div>
+      <span class="card-stat">Received · Needs review</span>
+    </div>
+  </div>
+
+  <!-- EXCEL -->
+  <div class="card" id="c-excel">
+    <div class="card-header">
+      <span class="card-type">Excel</span>
+      <div class="card-menu"><span></span><span></span><span></span></div>
+    </div>
+    <div class="card-icon" style="background:linear-gradient(135deg,#2E9B86,#62C0A6);">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+        <rect x="1" y="1" width="18" height="18" rx="3" stroke="rgba(255,255,255,0.92)" stroke-width="1.5"/>
+        <path d="M6 6 L10 14 M10 6 L6 14" stroke="rgba(255,255,255,0.92)" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M13.5 7h3.5M13.5 10h2.5M13.5 13h3.5" stroke="rgba(255,255,255,0.45)" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="card-title">Inventory Sheet</div>
+    <div class="card-sub" id="excel-sub">6,240 SKUs · Updated</div>
+    <div class="card-footer">
+      <div class="card-dot" id="excel-dot" style="background:#2E9B86;box-shadow:0 0 6px rgba(46,155,134,0.6);"></div>
+      <span class="card-stat" id="excel-stat">Active · 6,240 items</span>
+    </div>
+  </div>
+
+  <!-- WHATSAPP -->
+  <div class="card" id="c-wa">
+    <div class="card-header">
+      <span class="card-type">WhatsApp</span>
+      <div class="card-menu"><span></span><span></span><span></span></div>
+    </div>
+    <div class="card-icon" style="background:linear-gradient(135deg,#4E64A8,#8392C8);">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+        <circle cx="10" cy="10" r="8.5" stroke="rgba(255,255,255,0.92)" stroke-width="1.5"/>
+        <path d="M6.5 8.5h7M6.5 11.5h5" stroke="rgba(255,255,255,0.92)" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="card-title">Supplier Update</div>
+    <div class="card-sub">Batch #PLX-4422 delay</div>
+    <div class="card-footer">
+      <div class="card-dot" style="background:#4E64A8;box-shadow:0 0 6px rgba(78,100,168,0.6);"></div>
+      <span class="card-stat">3 unread · Just now</span>
+    </div>
+  </div>
+
+  <!-- ERP -->
+  <div class="card" id="c-erp">
+    <div class="card-header">
+      <span class="card-type">ERP</span>
+      <div class="card-menu"><span></span><span></span><span></span></div>
+    </div>
+    <div class="card-icon" style="background:linear-gradient(135deg,#3E6CA8,#6E97C8);">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+        <circle cx="10" cy="10" r="3.5" stroke="rgba(255,255,255,0.92)" stroke-width="1.5"/>
+        <circle cx="10" cy="10" r="7.8" stroke="rgba(255,255,255,0.45)" stroke-width="1" stroke-dasharray="2.8 3.5"/>
+        <circle cx="10" cy="10" r="5.5" stroke="rgba(255,255,255,0.22)" stroke-width="0.8"/>
+      </svg>
+    </div>
+    <div class="card-title">ERP Export</div>
+    <div class="card-sub">SAP · Last sync 4h ago</div>
+    <div class="card-footer">
+      <div class="card-dot" style="background:#3E6CA8;box-shadow:0 0 6px rgba(62,108,168,0.6);"></div>
+      <span class="card-stat">Sync pending</span>
+    </div>
+  </div>
+
+  <!-- CSV -->
+  <div class="card" id="c-csv">
+    <div class="card-header">
+      <span class="card-type">CSV</span>
+      <div class="card-menu"><span></span><span></span><span></span></div>
+    </div>
+    <div class="card-icon" style="background:linear-gradient(135deg,#D69244,#E6BC72);">
+      <svg width="19" height="16" viewBox="0 0 20 17" fill="none">
+        <rect x="1" y="1" width="18" height="15" rx="2.5" stroke="rgba(255,255,255,0.92)" stroke-width="1.5"/>
+        <path d="M1 6h18M7 6v10" stroke="rgba(255,255,255,0.5)" stroke-width="1.1"/>
+      </svg>
+    </div>
+    <div class="card-title">Batch Report</div>
+    <div class="card-sub">842 rows · Unverified</div>
+    <div class="card-footer">
+      <div class="card-dot" style="background:#FFA45A;box-shadow:0 0 6px rgba(255,164,90,0.7);"></div>
+      <span class="card-stat">Unverified</span>
+    </div>
+  </div>
+
+  <!-- ── STATUS CHIPS ─────────────────────────── -->
+  <div class="chip" id="ch-inventory">
+    <div class="chip-dot" style="background:#2E9B86;box-shadow:0 0 5px rgba(46,155,134,0.6);"></div>
+    Inventory
+  </div>
+  <div class="chip" id="ch-approval">
+    <div class="chip-dot" style="background:#6E7FC0;box-shadow:0 0 5px rgba(110,127,192,0.6);"></div>
+    Approval Pending
+  </div>
+  <div class="chip" id="ch-batch">
+    <div class="chip-dot" style="background:#3E9BA8;box-shadow:0 0 5px rgba(62,155,168,0.6);"></div>
+    Batch Release
+  </div>
+  <div class="chip" id="ch-receivable">
+    <div class="chip-dot" style="background:#C86A8E;box-shadow:0 0 5px rgba(200,106,142,0.6);"></div>
+    Receivable
+  </div>
+  <div class="chip" id="ch-pricing">
+    <div class="chip-dot" style="background:#FFC85C;box-shadow:0 0 5px rgba(255,200,92,0.7);"></div>
+    Pricing
+  </div>
+  <div class="chip" id="ch-warehouse">
+    <div class="chip-dot" style="background:#3E6CA8;box-shadow:0 0 5px rgba(62,108,168,0.6);"></div>
+    Warehouse
+  </div>
+  <div class="chip" id="ch-dispatch">
+    <div class="chip-dot" style="background:#FFA45A;box-shadow:0 0 5px rgba(255,164,90,0.7);"></div>
+    Dispatch
+  </div>
+
+  <!-- ── COUNTERS ──────────────────────────────── -->
+  <div class="counter" id="cnt-a" style="top:18vh;right:15vw;">47</div>
+  <div class="counter" id="cnt-b" style="bottom:20vh;left:9vw;">231</div>
+  <div class="counter" id="cnt-c" style="top:53vh;right:7vw;">09</div>
+
+  <!-- ── 3D DASHBOARD (the cards merge into this) ── -->
+  <div id="dash-stage"></div>
+
+</div><!-- /world -->
+
+<!-- driven cursor -->
+<div id="cursor">
+  <svg width="24" height="30" viewBox="0 0 24 30" fill="none">
+    <path d="M3 2 L3 23 L8.5 18 L12 26 L15 24.7 L11.5 17 L19 17 Z"
+      fill="#1a2b4a" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
+  </svg>
+</div>
+
+<!-- Problem-statement text beats -->
+<div id="story">
+  <div class="story-line"><div class="story-scrim" id="scrim-kick"></div><div class="story-kicker" id="story-kicker">A pharma supply chain runs on data from <i>everywhere</i>.</div></div>
+  <div class="story-line" id="story-punchwrap"><div class="story-scrim" id="scrim-punch"></div>
+    <div class="story-punch">None of it is connected.</div>
+    <div class="story-sub">Orders slip. Stock expires. Cash sits.</div>
+  </div>
+</div>
+
+<!-- Hero risk meter -->
+<div id="risk-meter">
+  <div class="rm-num" id="rm-num">$0</div>
+  <div class="rm-lbl">Exposed to risk right now</div>
+</div>
+
+<!-- Storm layer -->
+<div id="storm-overlay"></div>
+
+<!-- PharmaNET pulse ring -->
+<div id="pn-pulse"></div>
+
+<!-- Final frame -->
+<div id="final-frame">
+  <div class="ff-title">One Platform</div>
+  <div class="ff-arrow">↓</div>
+  <div class="ff-sub">Complete Supply Chain Visibility</div>
+  <div class="ff-arrow">↓</div>
+  <div class="ff-sub">Real-Time Decisions</div>
+  <button id="ff-cta">Book Free Assessment →</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════
+// PERSPECTIVE GRID — sky-toned
+// ═══════════════════════════════════════════════
+(function () {
+  const canvas = document.getElementById('grid-canvas');
+  const ctx    = canvas.getContext('2d');
+
+  function draw() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const vpX = W * 0.5, vpY = H * 0.44;
+
+    for (let i = 0; i < 18; i++) {
+      const t = i / 17;
+      const y = vpY + Math.pow(t, 2.4) * (H - vpY);
+      ctx.globalAlpha = 0.018 + t * 0.038;
+      ctx.strokeStyle = 'rgba(150,175,255,1)';
+      ctx.lineWidth   = 0.65;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    const numV = 22;
+    for (let i = 0; i <= numV; i++) {
+      const x = (i / numV) * W;
+      ctx.globalAlpha = (i % 4 === 0) ? 0.048 : 0.018;
+      ctx.strokeStyle = 'rgba(150,175,255,1)';
+      ctx.lineWidth   = 0.55;
+      ctx.beginPath();
+      ctx.moveTo(vpX + (x - vpX) * 0.015, vpY);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+
+    for (let i = 0; i < 8; i++) {
+      const t = i / 7;
+      const y = vpY * (1 - Math.pow(t, 2.0));
+      ctx.globalAlpha = 0.012 + t * 0.018;
+      ctx.strokeStyle = 'rgba(150,175,255,1)';
+      ctx.lineWidth   = 0.55;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    // ── Far-background supply-chain node network (infra layer) ──
+    const seeds = [
+      [0.08,0.16],[0.21,0.30],[0.15,0.62],[0.33,0.50],[0.27,0.80],
+      [0.46,0.22],[0.58,0.40],[0.50,0.70],[0.69,0.18],[0.72,0.58],
+      [0.85,0.34],[0.90,0.72],[0.63,0.86],[0.40,0.10],[0.80,0.10],
+    ].map(p => [p[0] * W, p[1] * H]);
+    ctx.lineWidth = 0.6;
+    for (let a = 0; a < seeds.length; a++) {
+      for (let b = a + 1; b < seeds.length; b++) {
+        const dx = seeds[a][0] - seeds[b][0], dy = seeds[a][1] - seeds[b][1];
+        const dist = Math.hypot(dx, dy);
+        if (dist < W * 0.22) {
+          ctx.globalAlpha = 0.05 * (1 - dist / (W * 0.22));
+          ctx.strokeStyle = 'rgba(170,150,255,1)';
+          ctx.beginPath(); ctx.moveTo(seeds[a][0], seeds[a][1]); ctx.lineTo(seeds[b][0], seeds[b][1]); ctx.stroke();
+        }
+      }
+    }
+    seeds.forEach(function (n) {
+      ctx.globalAlpha = 0.10;
+      ctx.fillStyle = 'rgba(170,150,255,1)';
+      ctx.beginPath(); ctx.arc(n[0], n[1], 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.045;
+      ctx.beginPath(); ctx.arc(n[0], n[1], 6, 0, Math.PI * 2); ctx.fill();
+    });
+
+    ctx.globalAlpha = 1;
+  }
+
+  window.addEventListener('resize', draw);
+  draw();
+})();
+
+// ═══════════════════════════════════════════════
+// DUST PARTICLES — white/pale on sky
+// ═══════════════════════════════════════════════
+(function () {
+  const count = 55;
+  for (let i = 0; i < count; i++) {
+    const el   = document.createElement('div');
+    el.className = 'dust';
+    const size = Math.random() * 3.0 + 0.7;
+    el.style.width  = size + 'px';
+    el.style.height = size + 'px';
+    el.style.left   = Math.random() * 100 + 'vw';
+    el.style.top    = Math.random() * 100 + 'vh';
+
+    // Pale whites and very light blues on sky
+    const pick = Math.floor(Math.random() * 4);
+    const bg = ['rgba(255,255,255,', 'rgba(200,230,255,', 'rgba(220,240,255,', 'rgba(255,250,230,'][pick];
+    const a  = 0.25 + Math.random() * 0.35;
+    el.style.background = bg + a + ')';
+    if (Math.random() > 0.6) el.style.borderRadius = Math.random() * 3 + 'px';
+
+    document.body.appendChild(el);
+
+    gsap.to(el, {
+      x: (Math.random() - 0.5) * 160,
+      y: (Math.random() - 0.5) * 160,
+      duration: 18 + Math.random() * 22,
+      repeat: -1, yoyo: true,
+      ease: 'sine.inOut',
+      delay: Math.random() * 14,
+    });
+    gsap.to(el, {
+      opacity: Math.random() * 0.4 + 0.10,
+      duration: 5 + Math.random() * 9,
+      repeat: -1, yoyo: true,
+      ease: 'sine.inOut',
+      delay: Math.random() * 7,
+    });
+    if (Math.random() > 0.6) {
+      gsap.to(el, {
+        rotation: (Math.random() - 0.5) * 200,
+        duration: 14 + Math.random() * 18,
+        repeat: -1, yoyo: true,
+        ease: 'sine.inOut',
+      });
+    }
+  }
+})();
+
+// ═══════════════════════════════════════════════
+// SVG CONNECTION SYSTEM
+// ═══════════════════════════════════════════════
+const svgEl  = document.getElementById('svg-conn');
+const svgDef = svgEl.querySelector('defs');
+let   connSeq = 0;
+window._frozen = false;
+
+// Deeper, richer colors — still visible on light sky
+const LINE_COLORS = [
+  ['#1D6FD8','#7C3AED'], ['#0EA5E9','#6366F1'],
+  ['#7C3AED','#EC4899'], ['#0284C7','#4FEED3'],
+  ['#6366F1','#FFA45A'], ['#EC4899','#4FEED3'],
+  ['#2563EB','#B37DFF'], ['#0EA5E9','#FF6DB6'],
+];
+
+function makeLine(x1, y1, x2, y2, fracEnd, c1, c2, strokeW) {
+  const id  = 'conn-' + (++connSeq);
+  const gid = 'cg-'   + connSeq;
+  const tx  = x1 + (x2 - x1) * fracEnd;
+  const ty  = y1 + (y2 - y1) * fracEnd;
+
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+  g.setAttribute('id', gid);
+  g.setAttribute('gradientUnits', 'userSpaceOnUse');
+  g.setAttribute('x1', x1); g.setAttribute('y1', y1);
+  g.setAttribute('x2', tx); g.setAttribute('y2', ty);
+  const s1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+  s1.setAttribute('offset', '0%');   s1.setAttribute('stop-color', c1 || '#1D6FD8'); s1.setAttribute('stop-opacity', '0.9');
+  const s2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+  s2.setAttribute('offset', '100%'); s2.setAttribute('stop-color', c2 || '#7C3AED'); s2.setAttribute('stop-opacity', '0.85');
+  g.appendChild(s1); g.appendChild(s2);
+  svgDef.appendChild(g);
+
+  const bend = (Math.random() - 0.5) * 0.32;
+  const dx = tx - x1, dy = ty - y1;
+  const cx1 = x1 + dx * 0.28 + dy * bend;
+  const cy1 = y1 + dy * 0.28 - dx * bend;
+  const cx2 = x1 + dx * 0.72 - dy * bend * 0.6;
+  const cy2 = y1 + dy * 0.72 + dx * bend * 0.6;
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('id', id);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', `url(#${gid})`);
+  path.setAttribute('stroke-width', strokeW || '2');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('opacity', '0');
+  const d = `M${x1} ${y1} C${cx1} ${cy1},${cx2} ${cy2},${tx} ${ty}`;
+  path.setAttribute('d', d);
+  svgEl.appendChild(path);
+
+  let len;
+  try { len = path.getTotalLength(); } catch(e) { len = 260; }
+  path.setAttribute('stroke-dasharray', len);
+  path.setAttribute('stroke-dashoffset', len);
+
+  return { path, len, gid };
+}
+
+function removeLine(path, gid) {
+  if (path.parentNode) path.parentNode.removeChild(path);
+  const g = svgDef.querySelector('#' + gid);
+  if (g) g.parentNode.removeChild(g);
+}
+
+function tryConnect(x1, y1, x2, y2, frac, drawDur, holdDur, c1, c2) {
+  const { path, len, gid } = makeLine(x1, y1, x2, y2, frac, c1, c2, 1.8);
+  gsap.timeline()
+    .to(path, { opacity: 0.72, duration: 0.12 })
+    .to(path, { strokeDashoffset: 0, duration: drawDur, ease: 'power2.out' })
+    .to(path, {
+      opacity: 0,
+      strokeDashoffset: -len * 0.28,
+      duration: 0.32,
+      delay: holdDur,
+      ease: 'power2.in',
+      onComplete: () => removeLine(path, gid),
+    });
+}
+
+function travelDot(pathEl, color, delay) {
+  const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  dot.setAttribute('r', '2.8');
+  dot.setAttribute('fill', color || '#7C3AED');
+  dot.setAttribute('opacity', '0');
+  svgEl.appendChild(dot);
+
+  let len;
+  try { len = pathEl.getTotalLength(); } catch(e) { len = 260; }
+
+  const progress = { t: 0 };
+  gsap.to(progress, {
+    t: 1,
+    duration: 1.1 + Math.random() * 0.5,
+    delay: delay || 0,
+    ease: 'none',
+    onStart: () => { gsap.to(dot, { opacity: 0.9, duration: 0.12 }); },
+    onUpdate: function () {
+      if (!pathEl.parentNode) return;
+      try {
+        const pt = pathEl.getPointAtLength(progress.t * len);
+        dot.setAttribute('cx', pt.x);
+        dot.setAttribute('cy', pt.y);
+      } catch(e) {}
+    },
+    onComplete: () => {
+      gsap.to(dot, { opacity: 0, duration: 0.2, onComplete: () => dot.parentNode && dot.parentNode.removeChild(dot) });
+    },
+  });
+}
+
+// One clear "trying to connect, fails" — line reaches out, turns red, snaps with NO MATCH
+function failHandshake(ax, ay, bx, by) {
+  const frac = 0.6;
+  const { path, len, gid } = makeLine(ax, ay, bx, by, frac, '#9fb6e0', '#9fb6e0', 2.4);
+  const ex = ax + (bx - ax) * frac, ey = ay + (by - ay) * frac;
+  const lab = document.createElement('div');
+  lab.className = 'fail-x';
+  lab.innerHTML = '<span class="fx-i">✕</span>NO MATCH';
+  lab.style.left = ex + 'px'; lab.style.top = ey + 'px';
+  document.getElementById('world').appendChild(lab);
+  gsap.set(lab, { xPercent: -50, yPercent: -50, opacity: 0, scale: 0.6 });
+  gsap.timeline()
+    .to(path, { opacity: 0.9, duration: 0.14 })
+    .to(path, { strokeDashoffset: 0, duration: 0.66, ease: 'power2.out' })
+    .add(function () { path.setAttribute('stroke', '#ff4d4d'); })
+    .to(path, { opacity: 0.2, duration: 0.08, yoyo: true, repeat: 3, ease: 'none' })
+    .to(lab, { opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(2)' }, '-=0.22')
+    .to(path, { strokeDashoffset: -len * 0.5, opacity: 0, duration: 0.4, ease: 'power2.in' }, '+=0.5')
+    .to(lab, { opacity: 0, scale: 0.8, duration: 0.4, onComplete: function () { lab.remove(); removeLine(path, gid); } }, '-=0.2');
+}
+
+// ═══════════════════════════════════════════════
+// CHART + DETAIL-VIEW BUILDERS
+// ═══════════════════════════════════════════════
+let _chartSeq = 0;
+function areaChartSVG(vals, w, h, color) {
+  const gid = 'chg' + (++_chartSeq);
+  const pad = 30, maxV = 125, n = vals.length;
+  const innerW = w - pad, innerH = h - 22;
+  const X = i => pad + (i / (n - 1)) * innerW;
+  const Y = v => 6 + innerH - (v / maxV) * innerH;
+  let line = '';
+  vals.forEach((v, i) => { line += (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1) + ' '; });
+  const area = line + 'L' + X(n - 1).toFixed(1) + ' ' + (6 + innerH) + ' L' + pad + ' ' + (6 + innerH) + ' Z';
+  let grid = '', ylabels = '';
+  for (let g = 0; g <= 5; g++) {
+    const gy = 6 + (g / 5) * innerH;
+    grid += '<line x1="' + pad + '" y1="' + gy.toFixed(1) + '" x2="' + w + '" y2="' + gy.toFixed(1) + '" stroke="rgba(20,60,120,0.07)" stroke-width="1"/>';
+    ylabels += '<text x="' + (pad - 6) + '" y="' + (gy + 3).toFixed(1) + '" text-anchor="end" font-size="8" fill="#9fb0c8">' + (maxV - g * 25) + '</text>';
+  }
+  const dates = ['6/20', '6/27', '7/4', '7/11', '7/18', '7/25', '8/1', '8/8'];
+  let xlabels = '';
+  for (let i = 0; i < n; i++) xlabels += '<text x="' + X(i).toFixed(1) + '" y="' + (h - 2) + '" text-anchor="middle" font-size="8" fill="#9fb0c8">' + (dates[i] || '') + '</text>';
+  const lx = X(n - 1).toFixed(1), ly = Y(vals[n - 1]).toFixed(1);
+  const marker = '<line x1="' + lx + '" y1="6" x2="' + lx + '" y2="' + (6 + innerH) + '" stroke="' + color + '" stroke-width="1" stroke-dasharray="3 3" opacity="0.4"/>'
+    + '<circle cx="' + lx + '" cy="' + ly + '" r="4" fill="#fff" stroke="' + color + '" stroke-width="2.5"/>';
+  return '<svg class="dash-chart" viewBox="0 0 ' + w + ' ' + h + '" width="100%" style="display:block;height:' + h + 'px" fill="none">'
+    + '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + color + '" stop-opacity="0.40"/><stop offset="1" stop-color="' + color + '" stop-opacity="0.02"/></linearGradient></defs>'
+    + grid + ylabels + xlabels
+    + '<path class="dch-area" d="' + area + '" fill="url(#' + gid + ')" opacity="0"/>'
+    + '<path class="dch-line" d="' + line + '" stroke="' + color + '" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
+    + marker
+    + '</svg>';
+}
+
+// Drill-down detail for the Expiry-risk theme — the ICP money shot
+function buildDetail() {
+  const dash = document.getElementById('dashboard');
+  if (!dash) return null;
+  let dv = dash.querySelector('#detail-view');
+  if (dv) return dv;
+  const chart = areaChartSVG([96, 90, 82, 72, 64, 53, 44, 31], 430, 150, '#dc2626'); // depletion toward expiry
+  dv = document.createElement('div');
+  dv.id = 'detail-view';
+  dv.innerHTML =
+    '<div class="dv-floats">'
+    + '<div class="dv-stat"><div class="n">8,400</div><div class="l">Units at Risk</div></div>'
+    + '<div class="dv-stat"><div class="n">$214K</div><div class="l">Value Exposed</div></div>'
+    + '<div class="dv-stat"><div class="n sev">21 days</div><div class="l">To Expiry</div></div>'
+    + '</div>'
+    + '<div class="dv-top"><span class="dv-back">&#8592;</span><span class="dv-title">Expiry Risk · Batch PLX-4422</span><span class="dash-badge b-sev">Severe</span></div>'
+    + '<div class="dv-sub">Amoxicillin 500 mg · 3 lots · Warehouse EU-Central</div>'
+    + '<div class="dv-body">'
+    + '<div class="dv-left"><div class="dash-sec">Weekly Depletion vs. Expiry Window</div>'
+    + '<div class="dash-chart-wrap" style="margin-top:8px">' + chart + '</div></div>'
+    + '<div class="dv-right"><div class="dash-sec">Key Facts</div>'
+    + '<div class="dv-facts">'
+    + '<div class="dv-fact"><span class="k">Depletion rate</span><span class="v">312 units / week</span></div>'
+    + '<div class="dv-fact"><span class="k">Projected write-off</span><span class="v sev">$214,000</span></div>'
+    + '<div class="dv-fact"><span class="k">Days of cover left</span><span class="v">21 days</span></div>'
+    + '<div class="dv-fact"><span class="k">Reconciled from</span><span class="v"><span class="dv-sources"><span class="dv-src">ERP</span><span class="dv-src">Email</span><span class="dv-src">Excel</span><span class="dv-src">WhatsApp</span></span></span></div>'
+    + '</div>'
+    + '<div class="dv-reco"><div class="dv-reco-h">&#9889; PharmaNET recommends</div>'
+    + '<div class="dv-reco-t">Redistribute 6,200 units to EU-West, where demand is up 18%.</div>'
+    + '<div class="dv-reco-m">Prevents a $158K write-off · act within 6 days</div>'
+    + '<span class="dv-reco-btn">Approve &amp; Dispatch &#8594;</span></div>'
+    + '</div></div>';
+  dash.appendChild(dv);
+  return dv;
+}
+
+// ═══════════════════════════════════════════════
+// MAIN ANIMATION — identical logic, sky palette
+// ═══════════════════════════════════════════════
+window.addEventListener('load', function () {
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+
+  const P = {
+    email : { l: W * 0.050, t: H * 0.175 },
+    pdf   : { l: W * 0.596, t: H * 0.062 },
+    excel : { l: W * 0.162, t: H * 0.540 },
+    wa    : { l: W * 0.700, t: H * 0.405 },
+    erp   : { l: W * 0.348, t: H * 0.268 },
+    csv   : { l: W * 0.488, t: H * 0.614 },
+  };
+  const CW = 244, CH = 146;
+
+  const C = {};
+  for (const k in P) C[k] = { x: P[k].l + CW / 2, y: P[k].t + CH / 2 };
+
+  const CP = {
+    inventory  : { l: W * 0.442, t: H * 0.148 },
+    approval   : { l: W * 0.108, t: H * 0.382 },
+    batch      : { l: W * 0.262, t: H * 0.762 },
+    receivable : { l: W * 0.035, t: H * 0.658 },
+    pricing    : { l: W * 0.592, t: H * 0.692 },
+    warehouse  : { l: W * 0.752, t: H * 0.218 },
+    dispatch   : { l: W * 0.798, t: H * 0.542 },
+  };
+
+  const eEmail = document.getElementById('c-email');
+  const ePdf   = document.getElementById('c-pdf');
+  const eExcel = document.getElementById('c-excel');
+  const eWA    = document.getElementById('c-wa');
+  const eErp   = document.getElementById('c-erp');
+  const eCsv   = document.getElementById('c-csv');
+  const eBadge = document.getElementById('badge-email');
+
+  // de-basic the source cards — colored brand accent + a faint live sparkline
+  [document.getElementById('c-email'), document.getElementById('c-pdf'), document.getElementById('c-excel'),
+   document.getElementById('c-wa'), document.getElementById('c-erp'), document.getElementById('c-csv')].forEach(function (card) {
+    if (!card) return;
+    const dot = card.querySelector('.card-dot');
+    const col = (dot && dot.style.background) || '#2E6FB5';
+    const acc = document.createElement('div'); acc.className = 'card-accent'; acc.style.background = col;
+    card.insertBefore(acc, card.firstChild);
+    const ns = 'http://www.w3.org/2000/svg';
+    const sp = document.createElementNS(ns, 'svg');
+    sp.setAttribute('viewBox', '0 0 200 28'); sp.setAttribute('class', 'card-spark2'); sp.setAttribute('preserveAspectRatio', 'none');
+    const pts = []; for (let j = 0; j < 11; j++) pts.push([j * 20, 23 - Math.random() * 18]);
+    const d = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0] + ' ' + p[1].toFixed(1); }).join(' ');
+    const pa = document.createElementNS(ns, 'path');
+    pa.setAttribute('d', d); pa.setAttribute('fill', 'none'); pa.setAttribute('stroke', col);
+    pa.setAttribute('stroke-width', '2'); pa.setAttribute('stroke-linecap', 'round'); pa.setAttribute('stroke-linejoin', 'round'); pa.setAttribute('opacity', '0.6');
+    sp.appendChild(pa); card.appendChild(sp);
+  });
+
+  const chips = {
+    inventory  : document.getElementById('ch-inventory'),
+    approval   : document.getElementById('ch-approval'),
+    batch      : document.getElementById('ch-batch'),
+    receivable : document.getElementById('ch-receivable'),
+    pricing    : document.getElementById('ch-pricing'),
+    warehouse  : document.getElementById('ch-warehouse'),
+    dispatch   : document.getElementById('ch-dispatch'),
+  };
+
+  const cntA = document.getElementById('cnt-a');
+  const cntB = document.getElementById('cnt-b');
+  const cntC = document.getElementById('cnt-c');
+
+  gsap.set(eEmail, { left:P.email.l, top:P.email.t, x:-440, rotation:-6,  scale:0.94, opacity:0 });
+  gsap.set(ePdf,   { left:P.pdf.l,   top:P.pdf.t,   x: 400, y:-260, rotation:8,   scale:0.94, opacity:0 });
+  gsap.set(eExcel, { left:P.excel.l, top:P.excel.t, y: 400, rotation:-11, scale:0.93, opacity:0 });
+  gsap.set(eWA,    { left:P.wa.l,    top:P.wa.t,    x: 400, rotation:4,   scale:0.95, opacity:0 });
+  gsap.set(eErp,   { left:P.erp.l,   top:P.erp.t,   y: 260, rotation:-5,  scale:0.94, opacity:0 });
+  gsap.set(eCsv,   { left:P.csv.l,   top:P.csv.t,   x: 220, y:-200, rotation:7, scale:0.93, opacity:0 });
+  gsap.set(eBadge, { scale:0.35, opacity:0 });
+
+  for (const k in chips) gsap.set(chips[k], { left: CP[k].l, top: CP[k].t });
+  gsap.set(chips.inventory,  { x:-75,  opacity:0, scale:0.82 });
+  gsap.set(chips.approval,   { y: 60,  opacity:0, scale:0.82 });
+  gsap.set(chips.batch,      { y: 70,  opacity:0, scale:0.82 });
+  gsap.set(chips.receivable, { y: 65,  opacity:0, scale:0.82 });
+  gsap.set(chips.pricing,    { x: 70,  opacity:0, scale:0.82 });
+  gsap.set(chips.warehouse,  { x: 65, y:-50, opacity:0, scale:0.82 });
+  gsap.set(chips.dispatch,   { x: 75,  opacity:0, scale:0.82 });
+
+  // ─── CAMERA RIG (single authority for #world) ───
+  const worldEl = document.getElementById('world');
+  const bgEl    = document.getElementById('bg');
+  const cam = { x: 0, y: 0, scale: 1, rot: 0 };
+  const _camT0 = performance.now();
+  function renderCam() {
+    const t = (performance.now() - _camT0) / 1000;
+    // handheld float — keeps the frame alive, never locked
+    const fx = Math.sin(t * 0.34) * 6 + Math.sin(t * 0.91) * 2.4;
+    const fy = Math.cos(t * 0.29) * 5 + Math.sin(t * 0.77) * 1.8;
+    const fr = Math.sin(t * 0.23) * 0.16;
+    worldEl.style.transform =
+      'translate(' + (cam.x + fx) + 'px,' + (cam.y + fy) + 'px) scale(' + cam.scale + ') rotate(' + (cam.rot + fr) + 'deg)';
+    // parallax — background drifts opposite & shallower for depth
+    bgEl.style.transform =
+      'translate(' + ((cam.x + fx) * -0.22) + 'px,' + ((cam.y + fy) * -0.18) + 'px) scale(' + (1.06 + (cam.scale - 1) * 0.45) + ')';
+  }
+  gsap.ticker.add(renderCam);
+
+  // World-space center of a card (real height, not the old fixed CH)
+  function cardCenter(el) {
+    return { x: el.offsetLeft + el.offsetWidth / 2, y: el.offsetTop + el.offsetHeight / 2 };
+  }
+
+  // Drive the camera so a given SCREEN point lands at viewport centre, at scale s1.
+  // (Lets the cursor "click" then have the camera zoom straight into that point.)
+  function zoomToScreen(sx, sy, s1, dur, ease) {
+    gsap.killTweensOf(cam);
+    const s0 = cam.scale;
+    const tx = -((sx - W / 2) - cam.x) * s1 / s0;
+    const ty = -((sy - H / 2) - cam.y) * s1 / s0;
+    gsap.to(cam, { scale: s1, x: tx, y: ty, duration: dur, ease: ease || 'power2.inOut' });
+  }
+
+  // ─── Build the 3D dashboard DOM (hidden until the cards merge) ───
+  function buildDashboard() {
+    const ICO = {
+      box:'<path d="M2.5 5 L8 2 L13.5 5 V11 L8 14 L2.5 11 Z"/><path d="M2.5 5 L8 8 L13.5 5 M8 8 V14"/>',
+      layers:'<path d="M8 2 L14 5 L8 8 L2 5 Z"/><path d="M2 8 L8 11 L14 8"/><path d="M2 11 L8 14 L14 11"/>',
+      card:'<rect x="2" y="4" width="12" height="9" rx="1.6"/><path d="M2 7 H14"/>',
+      shield:'<path d="M8 2 L13 4 V8 C13 11 8 14 8 14 C8 14 3 11 3 8 V4 Z"/><path d="M5.7 8 L7.2 9.6 L10.4 6.4"/>',
+      snow:'<path d="M8 2 V14 M2.5 5 L13.5 11 M13.5 5 L2.5 11"/>',
+      truck:'<rect x="1.5" y="4.5" width="8" height="6.5" rx="1"/><path d="M9.5 6.5 H12.5 L14.5 9 V11 H9.5 Z"/><circle cx="4.5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/>',
+      trend:'<path d="M2 11 L6 7 L9 9.5 L14 4"/><path d="M10 4 H14 V8"/>',
+    };
+    function tile(color, glyph) {
+      return '<span class="dash-ico" style="background:' + color + '"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + glyph + '</svg></span>';
+    }
+    function railIco(glyph, on) {
+      return '<span class="rail-ico' + (on ? ' on' : '') + '"><svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + glyph + '</svg></span>';
+    }
+    const caret = '<svg class="dash-caret" viewBox="0 0 10 10" fill="none" stroke="#7c93b4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2 L7 5 L3 8"/></svg>';
+    const noCaret = '<span style="width:9px;flex-shrink:0"></span>';
+
+    const MODS = [
+      { n:'Orders & Fulfilment',   ico:tile('#2e9b6a',ICO.box),    badge:'Live',   cls:'b-live' },
+      { n:'Inventory & Expiry',    ico:tile('#dc2626',ICO.layers), badge:'Severe', cls:'b-sev', subs:[
+          { t:'Expiry risk · Batch PLX-4422',   b:'Severe', cls:'b-sev'  },
+          { t:'Overstock · Amoxicillin 500mg',  b:'High',   cls:'b-high' },
+          { t:'Low stock · Insulin Glargine',   b:'Medium', cls:'b-med'  },
+      ]},
+      { n:'Receivables & Credit',   ico:tile('#e0603a',ICO.card),   badge:'Due',    cls:'b-high' },
+      { n:'Quality & Compliance',   ico:tile('#d39a2a',ICO.shield), badge:'Medium', cls:'b-med' },
+      { n:'Cold Chain & Warehouse', ico:tile('#3e6ca8',ICO.snow),   badge:'Low',    cls:'b-low' },
+      { n:'Dispatch & Logistics',   ico:tile('#4e64a8',ICO.truck),  badge:'Medium', cls:'b-med' },
+      { n:'Demand Forecast',        ico:tile('#2e6fb5',ICO.trend),  badge:'Live',   cls:'b-live' },
+    ];
+    let leftHTML = '<div class="dash-sec">Reports</div>';
+    MODS.forEach(function (m) {
+      const hasSub = !!m.subs;
+      leftHTML += '<div class="dash-row"' + (hasSub ? ' id="row-inv"' : '') + '>'
+        + '<span class="dash-row-name">' + (hasSub ? caret : noCaret) + m.ico + m.n + '</span>'
+        + '<span class="dash-badge ' + m.cls + '">' + m.badge + '</span></div>';
+      if (hasSub) {
+        let s = '<div class="dash-sub" id="dash-sub-inv">';
+        m.subs.forEach(function (x, j) {
+          s += '<div class="dash-subrow"' + (j === 0 ? ' id="subrow-expiry"' : '') + '><span class="dash-row-name"><span class="dash-row-ico"></span>' + x.t + '</span><span class="dash-badge ' + x.cls + '">' + x.b + '</span></div>';
+        });
+        leftHTML += s + '</div>';
+      }
+    });
+
+    const chart = areaChartSVG([62, 70, 58, 74, 66, 82, 78, 96], 440, 150, '#5B6CE0');
+    const rightHTML =
+      '<div class="dash-chart-wrap">'
+      + '<div class="dash-chart-head"><span class="dash-chart-title">Order Volume · Weekly</span><span class="dash-chart-cal">Last 8 weeks &#9662;</span></div>'
+      + chart + '</div>'
+      + '<div class="dash-kpis">'
+      + '<div class="kpi"><div class="kpi-top"><span class="kpi-num">94.2%</span><span class="kpi-tr up">&#9650; 2.1</span></div><div class="kpi-lbl">Order Fill Rate</div></div>'
+      + '<div class="kpi"><div class="kpi-top"><span class="kpi-num">88%</span><span class="kpi-tr down">&#9660; 1.4</span></div><div class="kpi-lbl">On-Time Dispatch</div></div>'
+      + '<div class="kpi"><div class="kpi-top"><span class="kpi-num warn">6 lots</span><span class="kpi-tr down">&#9650; 2</span></div><div class="kpi-lbl">Expiry Risk · 30d</div></div>'
+      + '</div>';
+
+    const stats =
+      '<div class="stat-card"><div class="stat-num" id="st-orders">1,284</div><div class="stat-lbl">Datapoints Analyzed</div></div>'
+      + '<div class="stat-card"><div class="stat-num">16.8%</div><div class="stat-lbl">Above Average &#9650;</div></div>'
+      + '<div class="stat-card"><div class="stat-num sev">Severe</div><div class="stat-lbl">Top Urgency</div></div>';
+
+    const rail = railIco(ICO.box, true) + railIco(ICO.layers) + railIco(ICO.card) + railIco(ICO.shield) + railIco(ICO.trend);
+    const toolbar = '<div class="dash-toolbar"><div class="dt-brand"><span class="dt-logo"></span>PharmaNET</div>'
+      + '<div class="dt-search">Search reports, batches, SKUs…</div>'
+      + '<div class="dt-tabs"><span class="on">Overview</span><span>Reports</span><span>Alerts</span></div>'
+      + '<div class="dt-avatar">SA</div></div>';
+    const stage = document.getElementById('dash-stage');
+    stage.innerHTML =
+      '<div id="dashboard">'
+      + toolbar
+      + '<div class="dash-header"><div class="dash-h-l"><span class="dash-h-title">Supply Chain Monitor</span><span class="dash-h-meta">14 sources reconciled · updated just now</span></div>'
+      + '<span class="dash-h-chip"><i></i>Live · All systems linked</span></div>'
+      + '<div class="dash-body"><div class="dash-rail">' + rail + '</div><div class="dash-left">' + leftHTML + '</div>'
+      + '<div class="dash-right">' + rightHTML + '</div></div>'
+      + '<div class="dash-floats">' + stats + '</div></div>';
+    return stage.querySelector('#dashboard');
+  }
+
+  const tl = gsap.timeline();
+
+  // ─── CAMERA SHOTS — one rig, authored per stage ───
+  tl.to(cam, { scale: 1.07, x: -12, y: 7, duration: 9.6, ease: 'sine.inOut' }, 1.5);      // chaos: slow dolly-in
+  tl.to(cam, { scale: 1.18, x: 0, y: 0, duration: 1.0, ease: 'power2.in' }, 11.3);         // pre-pulse punch-in
+  tl.to(cam, { scale: 0.97, duration: 1.7, ease: 'power3.out' }, 12.6);                    // pulse release / pull-back
+  tl.to(cam, { scale: 1.0, x: 0, y: 0, rot: 0, duration: 1.6, ease: 'power2.inOut' }, 15.2); // settle on the dashboard — elements zoom from here, not the camera
+  // after 16.8s the cursor/zoom stage drives the camera imperatively (zoomToScreen)
+
+  // ─── PROBLEM-STATEMENT TEXT BEATS (cut before the pulse) ───
+  const sKick  = document.getElementById('story-kicker');
+  const sPunch = document.querySelector('#story-punchwrap .story-punch');
+  const sSub   = document.querySelector('#story-punchwrap .story-sub');
+  gsap.to(sKick,  { opacity: 1, y: 0,   duration: 0.9,  ease: 'power3.out', delay: 0.6 });
+  gsap.to(sKick,  { opacity: 0, y: -16, duration: 0.7,  ease: 'power2.in',  delay: 5.5 });
+  gsap.to(sPunch, { opacity: 1, y: 0,   duration: 0.75, ease: 'power3.out', delay: 6.7 });
+  gsap.to(sSub,   { opacity: 1, y: 0,   duration: 0.6,  ease: 'power3.out', delay: 7.35 });
+  gsap.to([sPunch, sSub], { opacity: 0, y: -12, duration: 0.7, ease: 'power2.in', delay: 11.0 });
+  // dark scrims keep the text legible over the bright cards behind it
+  gsap.to('#scrim-kick',  { opacity: 1, duration: 0.9,  delay: 0.6 });
+  gsap.to('#scrim-kick',  { opacity: 0, duration: 0.7,  delay: 5.5 });
+  gsap.to('#scrim-punch', { opacity: 1, duration: 0.75, delay: 6.7 });
+  gsap.to('#scrim-punch', { opacity: 0, duration: 0.7,  delay: 11.0 });
+
+  // ─── ONE CLEAR FAILED HANDSHAKE (x2) + the hero risk meter ───
+  tl.call(function () { failHandshake(C.email.x, C.email.y, C.erp.x, C.erp.y); }, [], 6.9);
+  tl.call(function () { failHandshake(C.excel.x, C.excel.y, C.pdf.x, C.pdf.y); }, [], 8.5);
+  tl.call(function () {
+    const rm = document.getElementById('risk-meter');
+    const num = document.getElementById('rm-num');
+    gsap.to(rm, { opacity: 1, duration: 0.5, ease: 'power2.out' });
+    gsap.to(rm, { scale: 1.05, duration: 0.55, repeat: -1, yoyo: true, ease: 'sine.inOut' });
+    const o = { v: 0 };
+    gsap.to(o, { v: 214000, duration: 2.2, ease: 'power1.out',
+      onUpdate: function () { num.textContent = '$' + Math.round(o.v).toLocaleString(); } });
+  }, [], 8.8);
+  gsap.to('#risk-meter', { opacity: 0, duration: 0.6, ease: 'power2.in', delay: 11.0 });
+
+  // ── Phase 1 (0–1.5s): calm sky ────────────────
+  // environment breathes on its own
+
+  // ── Phase 2 (1.5–2.5s): cards enter ───────────
+  tl.to(eEmail, { x:14, scale:1.01, opacity:1, duration:0.64, ease:'power4.out' }, 1.50)
+    .to(eEmail, { x:0,  scale:1,    duration:0.32, ease:'power2.inOut' });
+  tl.to(ePdf,   { x:0, y:0, scale:1, opacity:1, duration:0.63, ease:'back.out(1.28)' }, 1.83);
+  tl.to(eExcel, { y:0, scale:1, opacity:1, duration:0.65, ease:'back.out(1.35)' }, 2.04);
+  tl.to(eWA,    { x:-18, scale:1.01, opacity:1, duration:0.52, ease:'power3.out' }, 2.24)
+    .to(eWA,    { x:0,   scale:1,    duration:0.44, ease:'elastic.out(0.95, 0.42)' });
+  tl.to(eErp,   { y:0, scale:1, opacity:1, duration:0.61, ease:'back.out(1.26)' }, 2.46);
+
+  // ── Phase 3 (2.5–4.0s): broken connections ─────
+  tl.call(function () {
+    tryConnect(C.email.x, C.email.y, C.pdf.x, C.pdf.y,
+               0.55, 0.82, 0.06, '#1D6FD8', '#7C3AED');
+
+    setTimeout(function () {
+      const { path, len, gid } = makeLine(C.excel.x, C.excel.y, C.erp.x, C.erp.y,
+                                           0.44, '#0EA5E9', '#4FEED3', 1.6);
+      gsap.timeline()
+        .to(path, { opacity:0.65, duration:0.1 })
+        .to(path, { strokeDashoffset:0, duration:0.70, ease:'power1.out' })
+        .to(path, { opacity:0.06, duration:0.09, yoyo:true, repeat:6, ease:'none' })
+        .to(path, { opacity:0, duration:0.22, onComplete: () => removeLine(path, gid) });
+    }, 340);
+
+    setTimeout(function () {
+      tryConnect(C.wa.x, C.wa.y, C.pdf.x, C.pdf.y,
+                 0.80, 0.88, 0.04, '#6366F1', '#EC4899');
+    }, 680);
+
+    setTimeout(function () {
+      tryConnect(C.erp.x, C.erp.y, C.email.x, C.email.y,
+                 0.46, 0.55, 0.02, '#2563EB', '#1D6FD8');
+    }, 1060);
+  }, [], 2.53);
+
+  // ── Phase 4 (4.0–6.0s): chips appear ──────────
+  const chipIn = [
+    ['inventory',4.00],['approval',4.16],['batch',4.32],
+    ['receivable',4.48],['pricing',4.64],['warehouse',4.80],['dispatch',4.96],
+  ];
+  chipIn.forEach(function([k, t]) {
+    const prop = (k==='warehouse') ? {x:0,y:0}
+               : (k==='inventory'||k==='pricing'||k==='dispatch') ? {x:0}
+               : {y:0};
+    tl.to(chips[k], { ...prop, scale:1, opacity:1, duration:0.50, ease:'back.out(1.45)' }, t);
+  });
+
+  tl.call(function () {
+    gsap.to(chips.inventory,  { x:-45, duration:9.4,  ease:'sine.inOut', repeat:-1, yoyo:true });
+    gsap.to(chips.approval,   { y:-35, duration:11.5, ease:'sine.inOut', repeat:-1, yoyo:true });
+    gsap.to(chips.batch,      { x:-22, y:20, duration:8.8, ease:'sine.inOut', repeat:-1, yoyo:true });
+    gsap.to(chips.receivable, { y:40,  duration:9.1,  ease:'sine.inOut', repeat:-1, yoyo:true });
+    gsap.to(chips.pricing,    { x:30,  y:-24, duration:10.5, ease:'sine.inOut', repeat:-1, yoyo:true });
+    gsap.to(chips.warehouse,  { y:-30, duration:8.2,  ease:'sine.inOut', repeat:-1, yoyo:true });
+    gsap.to(chips.dispatch,   { rotation:3, x:22, duration:7.8, ease:'sine.inOut', repeat:-1, yoyo:true });
+    gsap.to(chips.dispatch,   { x:-12, duration:0.06, yoyo:true, repeat:10, ease:'none', delay:0.9 });
+  }, [], 4.58);
+
+  // ── Phase 5 (6.0–8.0s): chaos escalates ────────
+  tl.call(function () {
+    gsap.to(eBadge, { opacity:1, scale:1, duration:0.22, ease:'back.out(2.6)' });
+
+    chips.approval.querySelector('.chip-dot').style.background = '#ef4444';
+    chips.approval.querySelector('.chip-dot').style.boxShadow  = '0 0 5px rgba(239,68,68,0.7)';
+    chips.approval.childNodes[2].textContent = 'Approval — Pending';
+    gsap.to(chips.approval, { color:'rgba(220,38,38,0.90)', borderColor:'rgba(220,38,38,0.28)', duration:0.4 });
+
+    const dot  = document.getElementById('excel-dot');
+    const stat = document.getElementById('excel-stat');
+    const sub  = document.getElementById('excel-sub');
+    dot.style.background = '#FFA45A';
+    dot.style.boxShadow  = '0 0 6px rgba(255,164,90,0.7)';
+    stat.textContent     = 'Overstock · Flag raised';
+    stat.style.color     = 'rgba(200,100,20,0.80)';
+    sub.textContent      = '6,240 SKUs · Check required';
+    sub.style.color      = 'rgba(200,100,20,0.55)';
+
+    gsap.to(eEmail, { y:13,  rotation:-7.5, duration:7.0, ease:'sine.inOut', repeat:-1, yoyo:true });
+    gsap.to(ePdf,   { x:-15, rotation:9.5,  duration:6.6, ease:'sine.inOut', repeat:-1, yoyo:true });
+    gsap.to(eExcel, { x:17,  y:-13, rotation:-13.5, duration:5.8, ease:'sine.inOut', repeat:-1, yoyo:true });
+    gsap.to(eErp,   { y:14,  rotation:-6.5, duration:8.0, ease:'sine.inOut', repeat:-1, yoyo:true });
+    gsap.to(eWA,    { x:-13, y:11,  rotation:5,    duration:7.7, ease:'sine.inOut', repeat:-1, yoyo:true });
+  }, [], 6.06);
+
+  tl.call(function () {
+    chips.receivable.querySelector('.chip-dot').style.background = '#ef4444';
+    chips.receivable.childNodes[2].textContent = 'Receivable — Due';
+    gsap.to(chips.receivable, { color:'rgba(220,38,38,0.90)', borderColor:'rgba(220,38,38,0.25)', duration:0.35 });
+  }, [], 6.55);
+
+  tl.to(eCsv, { x:0, y:0, scale:1, opacity:1, duration:0.60, ease:'back.out(1.26)' }, 6.92);
+  tl.call(function () {
+    gsap.to(eCsv, { x:-11, y:9, rotation:8, duration:5.2, ease:'sine.inOut', repeat:-1, yoyo:true });
+  }, [], 7.55);
+
+  // ── Phase 6 (8.0–10.0s): chain + particles ─────
+  tl.call(function () {
+    const chain = [
+      { a: C.email, b: C.excel,  c1:'#1D6FD8', c2:'#0EA5E9' },
+      { a: C.excel, b: C.erp,    c1:'#0EA5E9', c2:'#6366F1' },
+      { a: C.erp,   b: C.wa,     c1:'#6366F1', c2:'#B37DFF' },
+      { a: C.wa,    b: C.pdf,    c1:'#B37DFF', c2:'#EC4899' },
+      { a: C.pdf,   b: C.csv,    c1:'#EC4899', c2:'#FFA45A' },
+    ];
+    chain.forEach(function (seg, i) {
+      setTimeout(function () {
+        if (window._frozen) return;
+        const { path, len, gid } = makeLine(seg.a.x, seg.a.y, seg.b.x, seg.b.y, 1.0, seg.c1, seg.c2, 2.0);
+        const ptl = gsap.timeline();
+        ptl.to(path, { opacity:0.80, duration:0.12 })
+           .to(path, { strokeDashoffset:0, duration:0.72, ease:'power2.out' });
+        setTimeout(function () {
+          if (!window._frozen) { travelDot(path, seg.c2, 0); travelDot(path, seg.c1, 0.35); }
+        }, 220);
+        ptl.to(path, {
+          strokeDashoffset: len * 0.88, opacity: 0,
+          duration: 0.30, delay: 0.22, ease: 'power3.in',
+          onComplete: () => removeLine(path, gid),
+        });
+      }, i * 548);
+    });
+  }, [], 8.02);
+
+  // ── Phase 7 (10.0–11.5s): full chaos ───────────
+  tl.call(function () {
+    gsap.to([cntA, cntB, cntC], { opacity:1, stagger:0.16, duration:0.28 });
+
+    let vA = 47, vB = 231, vC = 9;
+    const iv = setInterval(function () {
+      vA += Math.floor(Math.random() * 4);
+      vB += Math.floor(Math.random() * 6) + 1;
+      vC++;
+      cntA.textContent = vA;
+      cntB.textContent = vB;
+      cntC.textContent = vC < 10 ? '0' + vC : vC;
+    }, 180);
+    window._iv = iv;
+
+    Object.values(chips).forEach(function (ch, i) {
+      gsap.to(ch, { scale:1.07, duration:0.40 + i * 0.06, ease:'sine.inOut', repeat:-1, yoyo:true, delay:i * 0.10 });
+    });
+
+    let lc = 0;
+    function spawnRand() {
+      if (window._frozen || lc >= 9) return;
+      lc++;
+      const nodeCs = [C.email, C.pdf, C.excel, C.wa, C.erp, C.csv];
+      const i1 = Math.floor(Math.random() * nodeCs.length);
+      let   i2 = Math.floor(Math.random() * nodeCs.length);
+      while (i2 === i1) i2 = Math.floor(Math.random() * nodeCs.length);
+      const cp = LINE_COLORS[Math.floor(Math.random() * LINE_COLORS.length)];
+      const frac = 0.38 + Math.random() * 0.62;
+      const { path, len, gid } = makeLine(nodeCs[i1].x, nodeCs[i1].y, nodeCs[i2].x, nodeCs[i2].y, frac, cp[0], cp[1], 1.4);
+      gsap.timeline()
+        .to(path, { opacity:0.30, duration:0.08 })
+        .to(path, { strokeDashoffset:0, duration:0.28 + Math.random() * 0.40, ease:'power1.out' })
+        .to(path, { opacity:0, duration:0.18, delay:Math.random() * 0.20, onComplete: () => removeLine(path, gid) });
+      setTimeout(spawnRand, 140 + Math.random() * 260);
+    }
+    spawnRand();
+  }, [], 10.03);
+
+  // ── Storm: danger intensifies as chaos builds (6.4s) ──
+  tl.call(function () {
+    gsap.to('#storm-overlay', { opacity: 0.85, duration: 4.5, ease: 'power1.in' });
+    gsap.to('#orb-sun', { opacity: 1.3, duration: 3.5, ease:'power1.in' });   // red danger flares
+    gsap.to('#bg', {
+      background: 'radial-gradient(ellipse at 50% 36%, #2e0d14 0%, #18091a 55%, #04050c 100%)',
+      duration: 5, ease: 'power1.in'
+    });
+  }, [], 6.4);
+
+  // ── FREEZE at 11.5s ─────────────────────────────
+  tl.call(function () {
+    window._frozen = true;
+    if (window._iv) clearInterval(window._iv);
+
+    const toFreeze = [
+      eEmail, ePdf, eExcel, eWA, eErp, eCsv, eBadge,
+      cntA, cntB, cntC,
+      ...Object.values(chips),
+      ...Array.from(document.querySelectorAll('.dust')),
+    ];
+    toFreeze.forEach(el => gsap.killTweensOf(el));
+    svgEl.querySelectorAll('path, circle').forEach(el => gsap.killTweensOf(el));
+    // 1 second of dead silence — chaos frozen in storm
+  }, [], 11.50);
+
+  // ── Stage 3 (12.5s): PharmaNET pulse ─────────────
+  tl.call(function () {
+    const pulse = document.getElementById('pn-pulse');
+    const allCards = [eEmail, ePdf, eExcel, eWA, eErp, eCsv];
+
+    // Pulse rings — 3 concentric waves
+    for (let i = 0; i < 3; i++) {
+      const ring = i === 0 ? pulse : pulse.cloneNode(false);
+      if (i > 0) { ring.id = 'pn-pulse-' + i; document.body.appendChild(ring); }
+      gsap.timeline({ delay: i * 0.30 })
+        .set(ring, { opacity: 1, scale: 0 })
+        .to(ring, { scale: 22, opacity: 0, duration: 2.0, ease: 'power2.out' });
+    }
+
+    // Sky clears as wave expands
+    gsap.to('#storm-overlay', { opacity: 0, duration: 2.4, delay: 0.5, ease: 'power2.out' });
+    gsap.to('#bg', {
+      backgroundColor: '#2a1a52',
+      background: 'radial-gradient(ellipse at 50% 36%, #4c3194 0%, #35206f 45%, #221547 75%, #150c2e 100%)',
+      duration: 2.8, delay: 0.5, ease: 'power2.out'
+    });
+    gsap.to(['#orb-sun','#orb-deep','#orb-horizon'], { opacity: 0.12, duration: 2.4, delay: 0.5, ease:'power2.out' });
+    gsap.to('#orb-white', { opacity: 0.55, duration: 2.8, delay: 0.6, ease:'power2.out' });
+
+    // Cards snap to order — staggered as pulse wave "hits" each
+    allCards.forEach(function (card, i) {
+      gsap.killTweensOf(card);
+      const hitDelay = 0.28 + i * 0.13;
+      gsap.to(card, {
+        rotation: 0, x: 0, y: 0, scale: 1,
+        duration: 0.52, delay: hitDelay, ease: 'back.out(1.8)'
+      });
+      gsap.timeline({ delay: hitDelay })
+        .to(card, { boxShadow:'0 0 0 2px rgba(30,140,255,0.7), 0 8px 32px rgba(30,120,255,0.28)', duration:0.22 })
+        .to(card, { boxShadow:'0 4px 24px rgba(20,70,140,0.10)', duration:0.55, ease:'power2.out' });
+    });
+
+    // Chips reset
+    Object.values(chips).forEach(function (ch, i) {
+      gsap.killTweensOf(ch);
+      gsap.to(ch, {
+        color:'rgba(20,70,140,0.80)', borderColor:'rgba(20,70,140,0.18)',
+        scale:1, duration:0.40, delay:0.45 + i * 0.07, ease:'power2.out'
+      });
+    });
+    chips.approval.childNodes[2].textContent = 'Approvals';
+    chips.receivable.childNodes[2].textContent = 'Receivable';
+
+    // Clear chaos counters
+    if (window._iv) clearInterval(window._iv);
+    gsap.to([cntA, cntB, cntC], { opacity:0, duration:0.35, delay:0.3 });
+
+    // Clean connectors redraw after cards land
+    setTimeout(function () {
+      svgEl.querySelectorAll('path, circle').forEach(function (el) {
+        gsap.killTweensOf(el); el.remove();
+      });
+      const links = [
+        [cardCenter(eEmail), cardCenter(ePdf)],  [cardCenter(ePdf), cardCenter(eExcel)],
+        [cardCenter(eExcel), cardCenter(eErp)],  [cardCenter(eErp), cardCenter(eWA)],
+        [cardCenter(eWA), cardCenter(eCsv)],     [cardCenter(eCsv), cardCenter(eEmail)],
+      ];
+      links.forEach(function ([a, b], i) {
+        setTimeout(function () {
+          const { path } = makeLine(a.x, a.y, b.x, b.y, 1.0, '#1a6fd8', '#0ea5e9', 1.8);
+          gsap.timeline()
+            .set(path, { opacity:0.85 })
+            .to(path, { strokeDashoffset:0, duration:0.50, ease:'power2.out' });
+          travelDot(path, '#60c8ff', 0.15);
+        }, i * 180);
+      });
+    }, 950);
+  }, [], 12.50);
+
+  // ── Stage 4 (15.5s): the source cards collapse INTO the unified dashboard ──
+  tl.call(function () {
+    const order = [eEmail, ePdf, eExcel, eWA, eErp, eCsv];
+    const dash  = buildDashboard();
+    const stage = document.getElementById('dash-stage');
+    const rows  = dash.querySelectorAll('.dash-row');
+    const statCards = dash.querySelectorAll('.stat-card');
+    const area  = dash.querySelector('.dch-area');
+    const line  = dash.querySelector('.dch-line');
+
+    // clear the resolved hexagon connectors from the pulse beat + any stray fail labels
+    svgEl.querySelectorAll('path, circle').forEach(function (el) {
+      gsap.killTweensOf(el);
+      gsap.to(el, { opacity: 0, duration: 0.35, onComplete: function () { if (el.parentNode) el.parentNode.removeChild(el); } });
+    });
+    document.querySelectorAll('.fail-x').forEach(function (e) { e.remove(); });
+
+    // dissolve the chaos-era scaffolding (status chips + counters)
+    Object.values(chips).forEach(function (ch) { gsap.killTweensOf(ch); gsap.to(ch, { opacity: 0, scale: 0.85, duration: 0.45, ease: 'power2.in' }); });
+    gsap.to([cntA, cntB, cntC], { opacity: 0, duration: 0.3 });
+
+    // a soft "absorb" glow blooms at centre as the cards stream in
+    const glow = document.createElement('div');
+    glow.style.cssText = 'position:fixed;left:50%;top:50%;width:130px;height:130px;margin:-65px 0 0 -65px;'
+      + 'border-radius:50%;z-index:39;pointer-events:none;'
+      + 'background:radial-gradient(circle,rgba(110,140,235,0.5) 0%,rgba(110,140,235,0.12) 45%,transparent 70%);opacity:0;';
+    document.body.appendChild(glow);
+    gsap.timeline()
+      .to(glow, { opacity: 1, scale: 1.3, duration: 0.5, ease: 'power2.out' })
+      .to(glow, { opacity: 0, scale: 2.6, duration: 0.7, ease: 'power2.in', onComplete: function () { glow.remove(); } });
+
+    // each card streams toward centre and dissolves (fast power3.in = motion-blur feel)
+    order.forEach(function (card, i) {
+      gsap.killTweensOf(card);
+      const c = cardCenter(card);
+      gsap.to(card, {
+        x: (W / 2 - c.x) * 0.9, y: (H / 2 - c.y) * 0.9,
+        scale: 0.3, opacity: 0, rotation: 0,
+        duration: 0.58, delay: i * 0.06, ease: 'power3.in',
+      });
+    });
+
+    // dashboard blooms AFTER the implosion — reads as "formed from them".
+    // 3D tilt owned by GSAP (rotationX/Y/Z) so later breathing never flattens it.
+    gsap.set(dash, { transformOrigin: '50% 50%', rotationX: 7, rotationY: -13, rotationZ: -4, scale: 0.86, opacity: 0 });
+    gsap.to(stage, { opacity: 1, duration: 0.4, delay: 0.5 });
+    gsap.to(dash,  { opacity: 1, scale: 1, duration: 0.95, delay: 0.55, ease: 'back.out(1.5)' });
+
+    rows.forEach(function (r, i) { gsap.to(r, { opacity: 1, duration: 0.4, delay: 1.1 + i * 0.06, ease: 'power2.out' }); });
+
+    let ll; try { ll = line.getTotalLength(); } catch(e) { ll = 480; }
+    line.setAttribute('stroke-dasharray', ll);
+    line.setAttribute('stroke-dashoffset', ll);
+    gsap.to(line, { strokeDashoffset: 0, duration: 1.0, delay: 1.45, ease: 'power2.out' });
+    gsap.to(area, { opacity: 1, duration: 0.7, delay: 1.75, ease: 'power2.out' });
+
+    statCards.forEach(function (s, i) {
+      gsap.fromTo(s, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, delay: 1.55 + i * 0.13, ease: 'back.out(1.5)' });
+    });
+  }, [], 15.50);
+
+  // ── Stage 5 (20.6s): cursor drills in — zoom to the click, open the detail view ──
+  tl.call(function () {
+    const cursor = document.getElementById('cursor');
+    const invRow = document.getElementById('row-inv');
+    if (!cursor || !invRow) return;
+
+    // cursor lerps toward the CURRENT target element each frame (screen space),
+    // so it stays locked even while the camera rig zooms and drifts.
+    const fol = { tEl: invRow, amt: 0.18, dipX: 0, dipY: 0, ox: 0.46, oy: 0.5, cx: 0, cy: 0 };
+    function tgt() { const r = fol.tEl.getBoundingClientRect(); return { x: r.left + r.width * fol.ox, y: r.top + r.height * fol.oy }; }
+    const c0 = tgt(); fol.cx = c0.x; fol.cy = c0.y;
+    gsap.set(cursor, { left: fol.cx, top: fol.cy, opacity: 1 });   // appears INSTANTLY, on the row
+    function follow() {
+      const t = tgt();
+      fol.cx += (t.x + fol.dipX - fol.cx) * fol.amt;
+      fol.cy += (t.y + fol.dipY - fol.cy) * fol.amt;
+      cursor.style.left = fol.cx + 'px';
+      cursor.style.top  = fol.cy + 'px';
+    }
+    gsap.ticker.add(follow);
+    window._cursorFollow = follow;
+
+    // live tick on the floating stat card
+    let ords = 1284;
+    const stOrders = document.getElementById('st-orders');
+    window._liveIv = setInterval(function () { ords += Math.floor(Math.random() * 3) + 1; if (stOrders) stOrders.textContent = ords.toLocaleString(); }, 850);
+
+    const cur = gsap.timeline();
+    const dash = document.getElementById('dashboard');
+
+    // 1) hover Inventory + lean the PANEL in (element zoom — the camera stays put,
+    //    so the background never mismatches the way a full-screen zoom did)
+    cur.add(function () { invRow.classList.add('hovered'); }, 0.5);
+    cur.to(dash, { scale: 1.06, duration: 1.0, ease: 'power2.out' }, 0.5);
+    // 2) click → expand the sub-rows
+    cur.to(fol, { dipY: 5, duration: 0.15, ease: 'power2.in' }, 1.6);
+    cur.add(function () {
+      invRow.classList.add('pressed');
+      const subEl = document.getElementById('dash-sub-inv');
+      gsap.to(subEl, { height: subEl.scrollHeight, duration: 0.5, ease: 'power2.out' });
+      subEl.querySelectorAll('.dash-subrow').forEach(function (sr, i) { gsap.to(sr, { opacity: 1, duration: 0.3, delay: 0.1 + i * 0.09 }); });
+      setTimeout(function () { invRow.classList.remove('pressed'); }, 150);
+    }, 1.72);
+    cur.to(fol, { dipY: 0, duration: 0.2 }, 1.82);
+    // 3) move cursor to the Expiry sub-row
+    cur.add(function () { const ex = document.getElementById('subrow-expiry'); if (ex) { fol.tEl = ex; ex.classList.add('hovered'); } }, 2.7);
+    // 4) click → DRILL IN: the detail view zooms up from the row and the panel pushes
+    //    forward (element scale, not a camera zoom)
+    cur.to(fol, { dipY: 5, duration: 0.15, ease: 'power2.in' }, 3.7);
+    cur.add(function () {
+      const dv = buildDetail();
+      gsap.to(dash.querySelectorAll('.dash-header, .dash-body, .dash-floats'), { opacity: 0, duration: 0.35, ease: 'power2.in' });
+      gsap.to(dash, { scale: 1.14, duration: 0.9, ease: 'power2.inOut' });
+      gsap.set(dv, { transformOrigin: '34% 40%' });
+      gsap.fromTo(dv, { opacity: 0, scale: 0.84 }, { opacity: 1, scale: 1, duration: 0.6, delay: 0.18, ease: 'power3.out' });
+      gsap.fromTo(dv.querySelectorAll('.dv-stat'), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.45, delay: 0.5, stagger: 0.12, ease: 'back.out(1.5)' });
+      gsap.to(cursor, { opacity: 0, duration: 0.3, delay: 0.25 });               // cursor's job is done
+    }, 3.82);
+  }, [], 20.60);
+
+  // ── Stage 6 (26s): zoom the panel back out to settle on the essentials ──
+  tl.call(function () {
+    const dash = document.getElementById('dashboard');
+    gsap.to(dash, { scale: 1.0, duration: 1.4, ease: 'power2.inOut' });   // element zoom-out (no camera)
+
+    // pulse the "Approve & Dispatch" CTA — the action PharmaNET is selling
+    const btn = document.querySelector('.dv-reco-btn');
+    if (btn) gsap.fromTo(btn, { boxShadow: '0 0 0 0 rgba(255,255,255,0.0)' },
+      { boxShadow: '0 0 0 3px rgba(255,255,255,0.55)', scale: 1.04, duration: 1.0, delay: 1.0, repeat: -1, yoyo: true, ease: 'sine.inOut' });
+  }, [], 26.00);
+
+  // ── Final Frame (29.5s) ───────────────────────────
+  tl.call(function () {
+    const ff  = document.getElementById('final-frame');
+    const els = ff.querySelectorAll('.ff-title, .ff-arrow, .ff-sub, #ff-cta');
+    ff.style.pointerEvents = 'all';
+
+    gsap.to(ff, { opacity:1, duration:0.9, ease:'power2.out' });
+    els.forEach(function (el, i) {
+      gsap.to(el, {
+        opacity:1, y:0, duration:0.62,
+        delay: 0.35 + i * 0.28, ease:'power3.out'
+      });
+    });
+
+    // CTA glow breathe
+    gsap.to('#ff-cta', {
+      boxShadow:'0 0 52px rgba(14,165,233,0.75)',
+      duration:1.5, delay:2.0, repeat:-1, yoyo:true, ease:'sine.inOut'
+    });
+
+    // Loop: fade out and reload
+    gsap.to(ff, { opacity:0, duration:1.0, delay:8.0, ease:'power2.in',
+      onComplete: function () { window.location.reload(); }
+    });
+  }, [], 29.50);
+
+}); // end load
+</script>
+</body>
 </html>
