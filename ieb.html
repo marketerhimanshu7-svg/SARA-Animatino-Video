@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IEB — Intelligent Enterprise Bot</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #0a0e1a;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0.022;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 512px 512px;
+}
+
+/* ─── Atmosphere ───────────────────────────── */
+#bg {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden;
+  background: #0a0e1a;
+  background-image: radial-gradient(ellipse at 50% 38%, #171b33 0%, #10132a 55%, #070812 100%);
+}
+.orb { position: absolute; border-radius: 50%; pointer-events: none; filter: blur(90px); }
+#orb-v1 { width: 720px; height: 660px; top: -20%; right: -10%;
+  background: radial-gradient(circle at 45% 45%, rgba(139,92,246,0.30) 0%, rgba(99,102,241,0.12) 45%, transparent 68%);
+  animation: pulse1 15s ease-in-out infinite; }
+#orb-v2 { width: 680px; height: 680px; bottom: -16%; left: -8%;
+  background: radial-gradient(circle at 50% 50%, rgba(56,189,248,0.16) 0%, transparent 68%);
+  animation: pulse2 18s ease-in-out infinite; }
+#orb-v3 { width: 520px; height: 460px; top: 20%; left: 4%;
+  background: radial-gradient(circle at 50% 50%, rgba(167,139,250,0.24) 0%, transparent 70%);
+  animation: pulse3 21s ease-in-out infinite; }
+
+@keyframes pulse1 { 0%,100%{transform:translate(0,0) scale(1);} 35%{transform:translate(-40px,30px) scale(1.09);} 68%{transform:translate(20px,-22px) scale(0.95);} }
+@keyframes pulse2 { 0%,100%{transform:translate(0,0) scale(1);} 42%{transform:translate(50px,-42px) scale(1.11);} 72%{transform:translate(-28px,25px) scale(0.93);} }
+@keyframes pulse3 { 0%,100%{transform:translate(0,0) scale(1);} 50%{transform:translate(58px,-50px) scale(1.16);} }
+
+#grid-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+.dust { position: fixed; pointer-events: none; will-change: transform, opacity; z-index: 5; border-radius: 50%; background: rgba(200,190,255,0.6); }
+
+/* ─── IEB orb avatar (chroma-keyed) ────────── */
+#orb-avatar {
+  position: fixed; left: 50%; top: 30vh; width: 210px; height: 210px;
+  margin-left: -105px; margin-top: -105px;
+  z-index: 60; pointer-events: none; opacity: 0;
+}
+#orb-glow {
+  position: absolute; inset: -30%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(139,92,246,0.55) 0%, rgba(99,102,241,0.18) 45%, transparent 72%);
+  filter: blur(20px);
+  animation: orbBreathe 3.2s ease-in-out infinite;
+}
+@keyframes orbBreathe { 0%,100%{ opacity:0.7; transform:scale(0.94); } 50%{ opacity:1; transform:scale(1.04); } }
+#orb-video { position: fixed; width: 1px; height: 1px; opacity: 0; left: -9999px; top: -9999px; }
+#orb-canvas { position: relative; width: 100%; height: 100%; display: block; }
+#orb-think {
+  position: absolute; inset: -14%; border-radius: 50%;
+  border: 2px solid rgba(167,139,250,0.7);
+  opacity: 0; transform: scale(0.8);
+}
+
+/* ─── Intro copy ────────────────────────────── */
+#intro-copy { position: fixed; left: 50%; top: 52vh; transform: translateX(-50%); text-align: center; width: 90%; z-index: 55; pointer-events: none; }
+.ieb-word { font-size: clamp(2.6rem, 7vw, 5rem); font-weight: 800; letter-spacing: -0.03em;
+  background: linear-gradient(90deg,#c4b5fd,#8b5cf6 55%,#6366f1); -webkit-background-clip: text; background-clip: text; color: transparent;
+  opacity: 0; transform: translateY(18px); }
+.ieb-full { margin-top: 0.4rem; font-size: clamp(1rem, 2.4vw, 1.5rem); font-weight: 600; color: rgba(255,255,255,0.82);
+  opacity: 0; transform: translateY(14px); letter-spacing: 0.01em; }
+.ieb-tag { margin-top: 0.6rem; font-size: clamp(0.85rem, 1.7vw, 1.05rem); font-weight: 500; color: rgba(180,180,220,0.55);
+  opacity: 0; transform: translateY(12px); }
+
+/* ─── Chat dock ─────────────────────────────── */
+#chat-dock { position: fixed; left: 50%; top: 41vh; transform: translate(-50%,-50%); width: 620px; max-width: 84vw; z-index: 55; opacity: 0; }
+#chat-bar {
+  display: flex; align-items: center; gap: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+  border: 1px solid rgba(180,165,255,0.25);
+  border-radius: 100px;
+  padding: 16px 24px;
+  box-shadow: 0 24px 60px rgba(10,6,30,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+#chat-text-wrap { flex: 1; font-size: clamp(0.95rem, 1.9vw, 1.15rem); font-weight: 500; color: #f1f0ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#chat-caret { display: inline-block; width: 2px; height: 1.1em; background: #a78bfa; margin-left: 2px; vertical-align: -0.15em; animation: caretBlink 0.9s steps(1) infinite; }
+@keyframes caretBlink { 50% { opacity: 0; } }
+
+#think-dots { position: fixed; left: 50%; top: 41vh; transform: translate(-50%, 34px); display: flex; gap: 6px; z-index: 55; opacity: 0; }
+#think-dots span { width: 6px; height: 6px; border-radius: 50%; background: #a78bfa; opacity: 0.35; animation: thinkBounce 1s ease-in-out infinite; }
+#think-dots span:nth-child(2) { animation-delay: 0.15s; }
+#think-dots span:nth-child(3) { animation-delay: 0.30s; }
+@keyframes thinkBounce { 0%,80%,100%{ transform: translateY(0); opacity:0.35; } 40%{ transform: translateY(-4px); opacity:1; } }
+
+/* ─── Answer dock ───────────────────────────── */
+#answer-dock { position: fixed; left: 50%; top: 51vh; transform: translateX(-50%); width: 620px; max-width: 88vw; z-index: 55; }
+.ans { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 100%; opacity: 0; }
+.ans-card {
+  background: linear-gradient(180deg, #141a30, #0d1122);
+  border: 1px solid rgba(150,135,255,0.22);
+  border-radius: 22px;
+  padding: 26px 30px 24px;
+  box-shadow: 0 40px 90px rgba(5,4,20,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+/* round 1 */
+.ans-figrow { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.ans-fig { font-size: clamp(1.8rem, 4.4vw, 2.9rem); font-weight: 800; color: #fff; letter-spacing: -0.02em; white-space: nowrap; }
+.ans-of { font-size: clamp(0.9rem, 1.8vw, 1.1rem); font-weight: 600; color: rgba(255,255,255,0.4); margin-left: 8px; }
+.ans-ring-wrap { position: relative; width: 66px; height: 66px; flex-shrink: 0; }
+.ans-ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); transform-origin: 50% 50%; }
+.ans-ring-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; color: #c4b5fd; }
+.ans-sub { margin-top: 12px; font-size: clamp(0.88rem, 1.6vw, 1.02rem); color: rgba(205,200,235,0.62); }
+.ans-sub b { color: #e2defc; font-weight: 700; }
+.ans-spark { display: block; width: 100%; height: 44px; margin-top: 14px; overflow: visible; }
+
+/* round 2 */
+.ans-headline { font-size: clamp(1.1rem, 2.4vw, 1.45rem); font-weight: 700; color: #fff; }
+.ans-headline span { color: #f87171; }
+.dist-list { margin-top: 16px; display: flex; flex-direction: column; gap: 2px; }
+.dist-item { display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 4px; border-bottom: 1px solid rgba(150,135,255,0.10);
+  opacity: 0; transform: translateY(10px); }
+.dist-item:last-child { border-bottom: none; }
+.dist-name { display: flex; align-items: center; gap: 10px; font-size: clamp(0.92rem, 1.8vw, 1.1rem); font-weight: 600; color: #eceafd; }
+.dist-dot { width: 7px; height: 7px; border-radius: 50%; background: #f87171; box-shadow: 0 0 8px rgba(248,113,113,0.7); flex-shrink: 0; }
+.dist-tag { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #f87171;
+  background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.3); padding: 3px 9px; border-radius: 20px; }
+.dist-more { font-size: 0.85rem; color: rgba(200,195,230,0.45); font-weight: 600; padding: 10px 4px 0; opacity: 0; }
+
+/* round 3 */
+.sku-q { font-size: clamp(0.76rem, 1.5vw, 0.9rem); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(200,195,230,0.4); margin-bottom: 14px; }
+.sku-row { display: flex; gap: 16px; }
+.sku-block { flex: 1; text-align: center; padding: 20px 12px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(150,135,255,0.14); opacity: 0; }
+.sku-name { font-size: clamp(0.86rem, 1.7vw, 1rem); font-weight: 600; color: rgba(230,228,250,0.78); }
+.sku-delta { margin-top: 6px; font-size: clamp(1.9rem, 4.6vw, 2.6rem); font-weight: 800; letter-spacing: -0.02em; }
+.sku-block.red .sku-delta { color: #f87171; }
+.sku-block.green .sku-delta { color: #4ade80; }
+.sku-note { margin-top: 4px; font-size: 0.76rem; color: rgba(200,195,230,0.4); font-weight: 600; }
+
+/* ─── Final frame ───────────────────────────── */
+#final-frame {
+  position: fixed; inset: 0; z-index: 160;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 45%, rgba(24,18,46,0.92) 0%, rgba(13,11,28,0.96) 55%, rgba(7,6,16,0.98) 100%);
+}
+.ff-title { font-size: clamp(2.2rem, 5.2vw, 4rem); font-weight: 700; color: #fff; letter-spacing: -0.025em; line-height: 1.1;
+  opacity: 0; transform: translateY(16px); }
+.ff-arrow { font-size: 1.2rem; color: rgba(167,139,250,0.55); margin: 0.55rem 0; opacity: 0; transform: translateY(8px); }
+.ff-sub { font-size: clamp(0.95rem, 2vw, 1.35rem); color: rgba(220,215,245,0.8); font-weight: 500; letter-spacing: 0.005em;
+  opacity: 0; transform: translateY(14px); margin: 0.15rem 0; }
+#ff-cta { margin-top: 2.6rem; padding: 0.9rem 2.6rem; background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+  color: #fff; font-size: 1.05rem; font-weight: 600; border-radius: 50px; border: none; cursor: pointer;
+  opacity: 0; transform: translateY(14px); box-shadow: 0 0 32px rgba(124,58,237,0.4); letter-spacing: 0.01em; }
+</style>
+</head>
+<body>
+
+<div id="bg">
+  <div class="orb" id="orb-v1"></div>
+  <div class="orb" id="orb-v2"></div>
+  <div class="orb" id="orb-v3"></div>
+  <canvas id="grid-canvas"></canvas>
+</div>
+
+<!-- IEB orb avatar: green-screen source keyed live onto canvas -->
+<div id="orb-avatar">
+  <div id="orb-glow"></div>
+  <div id="orb-think"></div>
+  <video id="orb-video" src="/assets/ieb-orb.mp4" muted loop playsinline autoplay preload="auto"></video>
+  <canvas id="orb-canvas" width="480" height="480"></canvas>
+</div>
+
+<div id="intro-copy">
+  <div class="ieb-word">IEB</div>
+  <div class="ieb-full">Intelligent Enterprise Bot</div>
+  <div class="ieb-tag">Ask it anything. It's already connected.</div>
+</div>
+
+<div id="chat-dock">
+  <div id="chat-bar">
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0;">
+      <path d="M10 2 L11.6 8.4 L18 10 L11.6 11.6 L10 18 L8.4 11.6 L2 10 L8.4 8.4 Z" fill="#a78bfa"/>
+    </svg>
+    <div id="chat-text-wrap"><span id="chat-text"></span><span id="chat-caret"></span></div>
+  </div>
+</div>
+
+<div id="think-dots"><span></span><span></span><span></span></div>
+
+<div id="answer-dock">
+
+  <!-- Round 1: sales achievement -->
+  <div class="ans" id="ans-1">
+    <div class="ans-card">
+      <div class="ans-figrow">
+        <div class="ans-fig" id="fig-1">₹0 Cr<span class="ans-of">of ₹3.0 Cr</span></div>
+        <div class="ans-ring-wrap">
+          <svg viewBox="0 0 66 66">
+            <circle cx="33" cy="33" r="27" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/>
+            <circle id="ring-1" cx="33" cy="33" r="27" fill="none" stroke="#a78bfa" stroke-width="6" stroke-linecap="round"/>
+          </svg>
+          <div class="ans-ring-pct" id="ring-pct-1">0%</div>
+        </div>
+      </div>
+      <div class="ans-sub">Required run rate <b>₹1.2 Cr</b> per day.</div>
+      <svg class="ans-spark" viewBox="0 0 200 44">
+        <path id="spark-path" d="M2,36 L30,30 L58,33 L86,18 L114,22 L142,9 L170,13 L198,3"
+          fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle id="spark-dot" cx="198" cy="3" r="4" fill="#c4b5fd" opacity="0"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Round 2: dormant distributors -->
+  <div class="ans" id="ans-2">
+    <div class="ans-card">
+      <div class="ans-headline">7 distributors inactive <span>5+ days</span></div>
+      <div class="dist-list" id="dist-list">
+        <div class="dist-item"><div class="dist-name"><span class="dist-dot"></span>Surat Central</div><div class="dist-tag">6 days</div></div>
+        <div class="dist-item"><div class="dist-name"><span class="dist-dot"></span>Rajkot East</div><div class="dist-tag">9 days</div></div>
+        <div class="dist-item"><div class="dist-name"><span class="dist-dot"></span>Vadodara North</div><div class="dist-tag">5 days</div></div>
+        <div class="dist-item"><div class="dist-name"><span class="dist-dot"></span>Bhavnagar</div><div class="dist-tag">7 days</div></div>
+      </div>
+      <div class="dist-more" id="dist-more">+ 3 more in West Zone</div>
+    </div>
+  </div>
+
+  <!-- Round 3: lowest growth SKU -->
+  <div class="ans" id="ans-3">
+    <div class="ans-card">
+      <div class="sku-q">Growth vs last year</div>
+      <div class="sku-row">
+        <div class="sku-block red"><div class="sku-name">Tubs 200ml</div><div class="sku-delta" id="delta-1">0%</div><div class="sku-note">lowest growth</div></div>
+        <div class="sku-block green"><div class="sku-name">Bars 90ml</div><div class="sku-delta" id="delta-2">0%</div><div class="sku-note">highest growth</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="final-frame">
+  <div class="ff-title">Ask Anything.</div>
+  <div class="ff-arrow">↓</div>
+  <div class="ff-sub">Get Answers Instantly.</div>
+  <div class="ff-arrow">↓</div>
+  <div class="ff-sub">Connected to Every System You Run.</div>
+  <button id="ff-cta">See IEB in Action →</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+'use strict';
+
+// ═══ PERSPECTIVE GRID + NODE NETWORK ═══
+(function () {
+  const canvas = document.getElementById('grid-canvas');
+  const ctx = canvas.getContext('2d');
+  function draw() {
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    const vpY = H * 0.4;
+    for (let i = 0; i < 16; i++) {
+      const t = i / 15; const y = vpY + Math.pow(t, 2.4) * (H - vpY);
+      ctx.globalAlpha = 0.014 + t * 0.03; ctx.strokeStyle = 'rgba(160,150,255,1)'; ctx.lineWidth = 0.6;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+    const seeds = [[0.1,0.2],[0.24,0.34],[0.16,0.66],[0.35,0.52],[0.29,0.82],
+      [0.48,0.24],[0.6,0.42],[0.52,0.72],[0.7,0.2],[0.74,0.6],
+      [0.86,0.36],[0.9,0.74],[0.64,0.88],[0.42,0.12],[0.8,0.12]].map(function(p){ return [p[0]*W, p[1]*H]; });
+    ctx.lineWidth = 0.6;
+    for (let a = 0; a < seeds.length; a++) {
+      for (let b = a + 1; b < seeds.length; b++) {
+        const dx = seeds[a][0]-seeds[b][0], dy = seeds[a][1]-seeds[b][1]; const dist = Math.hypot(dx, dy);
+        if (dist < W * 0.22) {
+          ctx.globalAlpha = 0.05 * (1 - dist / (W * 0.22)); ctx.strokeStyle = 'rgba(170,150,255,1)';
+          ctx.beginPath(); ctx.moveTo(seeds[a][0], seeds[a][1]); ctx.lineTo(seeds[b][0], seeds[b][1]); ctx.stroke();
+        }
+      }
+    }
+    seeds.forEach(function (n) {
+      ctx.globalAlpha = 0.11; ctx.fillStyle = 'rgba(180,160,255,1)';
+      ctx.beginPath(); ctx.arc(n[0], n[1], 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.045; ctx.beginPath(); ctx.arc(n[0], n[1], 6, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  }
+  window.addEventListener('resize', draw);
+  draw();
+})();
+
+// ═══ DUST PARTICLES ═══
+(function () {
+  const count = 32;
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div'); el.className = 'dust';
+    const size = Math.random() * 2.6 + 0.6;
+    el.style.width = size + 'px'; el.style.height = size + 'px';
+    el.style.left = Math.random() * 100 + 'vw'; el.style.top = Math.random() * 100 + 'vh';
+    el.style.opacity = (Math.random() * 0.35 + 0.08).toFixed(2);
+    document.body.appendChild(el);
+    gsap.to(el, {
+      y: '-=' + (Math.random() * 60 + 30), x: '+=' + (Math.random() * 30 - 15),
+      duration: Math.random() * 10 + 10, repeat: -1, yoyo: true, ease: 'sine.inOut', delay: Math.random() * 6
+    });
+  }
+})();
+
+// ═══ IEB ORB — realtime canvas chroma key (green-screen removal) ═══
+(function () {
+  const video = document.getElementById('orb-video');
+  const canvas = document.getElementById('orb-canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  let running = false;
+
+  function tick() {
+    if (video.readyState >= 2) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const d = frame.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const r = d[i], g = d[i + 1], b = d[i + 2];
+        const diff = g - Math.max(r, b);
+        if (diff > 45) {
+          d[i + 3] = 0;
+        } else if (diff > 8) {
+          d[i + 3] = Math.round(255 * (1 - (diff - 8) / 37));
+          const avg = (r + b) * 0.5;
+          if (g > avg) d[i + 1] = avg + (g - avg) * 0.4;
+        }
+      }
+      ctx.putImageData(frame, 0, 0);
+    }
+    requestAnimationFrame(tick);
+  }
+  function start() { if (running) return; running = true; tick(); }
+  video.addEventListener('loadeddata', start);
+  video.play().catch(function () {});
+  setTimeout(start, 400);
+})();
+
+// ═══ MASTER TIMELINE ═══
+window.addEventListener('load', function () {
+
+  function typeTo(el, text, duration) {
+    const state = { n: 0 };
+    return gsap.to(state, {
+      n: text.length, duration: duration, ease: 'none',
+      onUpdate: function () { el.textContent = text.slice(0, Math.round(state.n)); }
+    });
+  }
+
+  const orb = document.getElementById('orb-avatar');
+  const orbThink = document.getElementById('orb-think');
+  const chatText = document.getElementById('chat-text');
+  const thinkDots = document.getElementById('think-dots');
+  const ans1 = document.getElementById('ans-1');
+  const ans2 = document.getElementById('ans-2');
+  const ans3 = document.getElementById('ans-3');
+
+  gsap.set([ans1, ans2, ans3], { y: 14 });
+
+  const tl = gsap.timeline();
+
+  // ── Intro: orb + wordmark ──
+  tl.to(orb, { opacity: 1, duration: 0.8, ease: 'power2.out' }, 0.2)
+    .fromTo(orb, { scale: 0.7 }, { scale: 1, duration: 1.0, ease: 'back.out(1.6)' }, 0.2)
+    .to('.ieb-word', { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, 0.7)
+    .to('.ieb-full', { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 0.95)
+    .to('.ieb-tag', { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 1.15);
+
+  // ── Dock the orb, dismiss intro copy, reveal chat bar ──
+  tl.to('#intro-copy', { opacity: 0, y: -14, duration: 0.5, ease: 'power2.in' }, 2.6)
+    .to(orb, { top: '18vh', width: 86, height: 86, marginLeft: -43, marginTop: -43, duration: 0.95, ease: 'power3.inOut' }, 2.7)
+    .to('#chat-dock', { opacity: 1, duration: 0.6, ease: 'power2.out' }, 3.1);
+
+  function thinkPulse(at) {
+    tl.to(thinkDots, { opacity: 1, duration: 0.3 }, at)
+      .to(orbThink, { opacity: 1, scale: 1.35, duration: 0.55, ease: 'power2.out' }, at)
+      .to(orbThink, { opacity: 0, duration: 0.4 }, at + 0.55)
+      .to(thinkDots, { opacity: 0, duration: 0.25 }, at + 0.55);
+  }
+
+  // ═══ Round 1 — sales achievement ═══
+  tl.call(function () { chatText.textContent = ''; }, [], 3.9);
+  tl.add(typeTo(chatText, 'Sales achievement of Ahmedabad today?', 1.7), 3.9);
+  thinkPulse(5.75);
+  tl.to(ans1, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 6.5);
+  tl.call(function () {
+    const s1 = { v: 0 };
+    gsap.to(s1, {
+      v: 2.4, duration: 0.9, ease: 'power2.out',
+      onUpdate: function () { document.getElementById('fig-1').firstChild.textContent = '₹' + s1.v.toFixed(1) + ' Cr'; }
+    });
+    const ringEl = document.getElementById('ring-1');
+    const r = 27, C = 2 * Math.PI * r;
+    ringEl.setAttribute('stroke-dasharray', C);
+    ringEl.setAttribute('stroke-dashoffset', C);
+    const pctObj = { v: 0 };
+    gsap.to(pctObj, {
+      v: 80, duration: 0.9, ease: 'power2.out',
+      onUpdate: function () {
+        ringEl.setAttribute('stroke-dashoffset', C * (1 - pctObj.v / 100));
+        document.getElementById('ring-pct-1').textContent = Math.round(pctObj.v) + '%';
+      }
+    });
+    const path = document.getElementById('spark-path');
+    const len = path.getTotalLength();
+    path.setAttribute('stroke-dasharray', len);
+    path.setAttribute('stroke-dashoffset', len);
+    gsap.to(path, { strokeDashoffset: 0, duration: 1.0, delay: 0.2, ease: 'power2.out' });
+    gsap.to('#spark-dot', { opacity: 1, duration: 0.3, delay: 1.1 });
+  }, [], 6.5);
+  tl.to(ans1, { opacity: 0, y: -14, duration: 0.45, ease: 'power2.in' }, 10.6);
+
+  // ═══ Round 2 — dormant distributors ═══
+  tl.call(function () { chatText.textContent = ''; }, [], 11.3);
+  tl.add(typeTo(chatText, 'Show dormant distributors, West zone.', 1.7), 11.3);
+  thinkPulse(13.15);
+  tl.to(ans2, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 13.9);
+  tl.call(function () {
+    gsap.fromTo('#dist-list .dist-item', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, stagger: 0.11, ease: 'power2.out' });
+    gsap.to('#dist-more', { opacity: 1, duration: 0.4, delay: 0.6 });
+  }, [], 13.9);
+  tl.to(ans2, { opacity: 0, y: -14, duration: 0.45, ease: 'power2.in' }, 18.0);
+
+  // ═══ Round 3 — lowest growth SKU ═══
+  tl.call(function () { chatText.textContent = ''; }, [], 18.7);
+  tl.add(typeTo(chatText, 'Which SKU has lowest growth this month?', 1.75), 18.7);
+  thinkPulse(20.6);
+  tl.to(ans3, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 21.35);
+  tl.call(function () {
+    const d1 = { v: 0 }, d2 = { v: 0 };
+    gsap.to(d1, {
+      v: -12, duration: 0.8, ease: 'power2.out',
+      onUpdate: function () { document.getElementById('delta-1').textContent = d1.v.toFixed(0) + '%'; }
+    });
+    gsap.to(d2, {
+      v: 8, duration: 0.8, delay: 0.15, ease: 'power2.out',
+      onUpdate: function () { document.getElementById('delta-2').textContent = (d2.v >= 0 ? '+' : '') + d2.v.toFixed(0) + '%'; }
+    });
+    gsap.fromTo('.sku-block.red', { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.6, ease: 'back.out(1.4)' });
+    gsap.fromTo('.sku-block.green', { opacity: 0, x: 16 }, { opacity: 1, x: 0, duration: 0.6, delay: 0.1, ease: 'back.out(1.4)' });
+  }, [], 21.35);
+  tl.to(ans3, { opacity: 0, y: -14, duration: 0.45, ease: 'power2.in' }, 25.4);
+
+  // ── Wind down + Final frame ──
+  tl.to([orb, '#chat-dock'], { opacity: 0, duration: 0.6, ease: 'power2.in' }, 25.4);
+
+  tl.call(function () {
+    const ff = document.getElementById('final-frame');
+    const els = ff.querySelectorAll('.ff-title, .ff-arrow, .ff-sub, #ff-cta');
+    ff.style.pointerEvents = 'all';
+    gsap.to(ff, { opacity: 1, duration: 0.9, ease: 'power2.out' });
+    els.forEach(function (el, i) {
+      gsap.to(el, { opacity: 1, y: 0, duration: 0.6, delay: 0.35 + i * 0.26, ease: 'power3.out' });
+    });
+    gsap.to('#ff-cta', { boxShadow: '0 0 52px rgba(124,58,237,0.75)', duration: 1.5, delay: 2.0, repeat: -1, yoyo: true, ease: 'sine.inOut' });
+    gsap.to(ff, {
+      opacity: 0, duration: 1.0, delay: 7.5, ease: 'power2.in',
+      onComplete: function () { window.location.reload(); }
+    });
+  }, [], 26.3);
+
+});
+</script>
+</body>
+</html>
