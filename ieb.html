@@ -175,6 +175,7 @@ body::after {
 #video-frame { position: relative; width: 100vw; height: 56.25vw; max-height: 100vh; max-width: 177.78vh; }
 #video-frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 #screen-overlay { position: absolute; left: 21%; top: 5%; width: 61%; height: 59%; overflow: hidden; pointer-events: none; }
+#screen-fill { position: absolute; inset: 0; background: #0a0e1a; opacity: 0; }
 #intro-orb-avatar { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px; opacity: 0; transform: scale(0.7); }
 #intro-orb-glow { position: absolute; inset: -30%; border-radius: 50%;
   background: radial-gradient(circle, rgba(139,92,246,0.5) 0%, rgba(99,102,241,0.16) 45%, transparent 72%); filter: blur(16px); }
@@ -194,6 +195,7 @@ body::after {
   <div id="video-frame">
     <video id="intro-video" src="/assets/intro.mp4" autoplay muted playsinline preload="auto"></video>
     <div id="screen-overlay">
+      <div id="screen-fill"></div>
       <div id="intro-orb-avatar">
         <div id="intro-orb-glow"></div>
         <canvas id="intro-orb-canvas" width="480" height="480"></canvas>
@@ -227,6 +229,7 @@ body::after {
   <div class="think-ring" id="think-ring-2"></div>
   <div class="think-ring" id="think-ring-3"></div>
   <video id="orb-video" src="/assets/ieb-orb.mp4" muted loop playsinline autoplay preload="auto"></video>
+  <audio id="type-sample" src="/assets/typing-sample.mp3" preload="auto"></audio>
   <canvas id="orb-canvas" width="480" height="480"></canvas>
 </div>
 
@@ -416,8 +419,14 @@ function ensureAudio() {
 }
 // Browsers block unmuted audio until the user interacts with the page —
 // unlock on the first click/tap/key so sound can play for the rest of this visit.
-window.addEventListener('pointerdown', ensureAudio);
-window.addEventListener('keydown', ensureAudio);
+// (This also unmutes the intro video, which must start muted to be allowed to autoplay at all.)
+function unlockAV() {
+  ensureAudio();
+  const iv = document.getElementById('intro-video');
+  if (iv) iv.muted = false;
+}
+window.addEventListener('pointerdown', unlockAV);
+window.addEventListener('keydown', unlockAV);
 
 // Shared noise burst reused for every key (built once — the "click" transient).
 let clickNoiseBuffer = null;
@@ -461,8 +470,15 @@ function playKeyClick(bandFreq, bandQ, clickPeak, clickDur, thumpFreq, thumpPeak
   osc.start(t); osc.stop(t + thumpDur + 0.01);
 }
 
-function playTypeTick() {
-  playKeyClick(2600 + Math.random() * 1800, 0.9, 0.3, 0.024, 150 + Math.random() * 40, 0.13, 0.045);
+// Real keyboard sound sampled from the intro clip — played once per typed
+// question (not per character), so it sounds like natural human typing
+// rather than a per-letter blip train.
+const typeSample = document.getElementById('type-sample');
+function playTypingSample() {
+  if (!typeSample) return;
+  typeSample.currentTime = 0;
+  typeSample.volume = 0.55;
+  typeSample.play().catch(function () {});
 }
 
 function playEnterClick() {
@@ -475,14 +491,11 @@ function playEnterClick() {
 function startMainTimeline() {
 
   function typeTo(el, text, duration) {
-    const state = { n: 0, last: 0 };
+    playTypingSample();
+    const state = { n: 0 };
     return gsap.to(state, {
       n: text.length, duration: duration, ease: 'none',
-      onUpdate: function () {
-        const cur = Math.round(state.n);
-        el.textContent = text.slice(0, cur);
-        if (cur > state.last) { state.last = cur; playTypeTick(); }
-      }
+      onUpdate: function () { el.textContent = text.slice(0, Math.round(state.n)); }
     });
   }
 
@@ -635,6 +648,7 @@ window.addEventListener('load', function () {
   // The source clip locks off on the monitor at ~8.0s and runs to 10s —
   // adjust this if the cut point in intro.mp4 ever changes.
   gsap.delayedCall(8.0, function () {
+    gsap.to(document.getElementById('screen-fill'), { opacity: 1, duration: 0.12 });
     gsap.to(introOrb, { opacity: 1, scale: 1, duration: 0.35, ease: 'power2.out' });
     icons.forEach(function (icon, i) {
       gsap.to(icon, { opacity: 1, duration: 0.3, delay: i * 0.08 });
