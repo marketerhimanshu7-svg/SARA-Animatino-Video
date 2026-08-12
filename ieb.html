@@ -373,37 +373,55 @@ function ensureAudio() {
 window.addEventListener('pointerdown', ensureAudio);
 window.addEventListener('keydown', ensureAudio);
 
-function playTypeTick() {
-  const ctx = ensureAudio();
-  if (!ctx) return;
-  const t = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = 'square';
-  osc.frequency.setValueAtTime(680 + Math.random() * 140, t);
-  gain.gain.setValueAtTime(0.0001, t);
-  gain.gain.exponentialRampToValueAtTime(0.045, t + 0.006);
-  gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
-  osc.connect(gain).connect(ctx.destination);
-  osc.start(t); osc.stop(t + 0.04);
+// Shared noise burst reused for every key (built once — the "click" transient).
+let clickNoiseBuffer = null;
+function getClickNoise(ctx) {
+  if (!clickNoiseBuffer) {
+    const len = Math.ceil(ctx.sampleRate * 0.05);
+    clickNoiseBuffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = clickNoiseBuffer.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+  }
+  return clickNoiseBuffer;
 }
 
-function playEnterChime() {
+// Mechanical-keyboard-style key press: a filtered noise "click" (the tactile
+// tap) layered with a short low "thump" (the keycap bottoming out).
+function playKeyClick(bandFreq, bandQ, clickPeak, clickDur, thumpFreq, thumpPeak, thumpDur) {
   const ctx = ensureAudio();
   if (!ctx) return;
   const t = ctx.currentTime;
-  [660, 990].forEach(function (freq, i) {
-    const start = t + i * 0.08;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, start);
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(0.08, start + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.3);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(start); osc.stop(start + 0.32);
-  });
+
+  const noise = ctx.createBufferSource();
+  noise.buffer = getClickNoise(ctx);
+  const band = ctx.createBiquadFilter();
+  band.type = 'bandpass';
+  band.frequency.value = bandFreq;
+  band.Q.value = bandQ;
+  const clickGain = ctx.createGain();
+  clickGain.gain.setValueAtTime(clickPeak, t);
+  clickGain.gain.exponentialRampToValueAtTime(0.0005, t + clickDur);
+  noise.connect(band).connect(clickGain).connect(ctx.destination);
+  noise.start(t); noise.stop(t + clickDur + 0.01);
+
+  const osc = ctx.createOscillator();
+  const oscGain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(thumpFreq, t);
+  osc.frequency.exponentialRampToValueAtTime(thumpFreq * 0.65, t + thumpDur);
+  oscGain.gain.setValueAtTime(thumpPeak, t + 0.002);
+  oscGain.gain.exponentialRampToValueAtTime(0.0005, t + thumpDur);
+  osc.connect(oscGain).connect(ctx.destination);
+  osc.start(t); osc.stop(t + thumpDur + 0.01);
+}
+
+function playTypeTick() {
+  playKeyClick(2600 + Math.random() * 1800, 0.9, 0.3, 0.024, 150 + Math.random() * 40, 0.13, 0.045);
+}
+
+function playEnterClick() {
+  // A bigger key (Enter) — lower/rounder click, heavier thump.
+  playKeyClick(1900 + Math.random() * 500, 0.8, 0.42, 0.035, 120, 0.26, 0.09);
 }
 
 // ═══ MASTER TIMELINE ═══
@@ -449,7 +467,7 @@ window.addEventListener('load', function () {
   function thinkPulse(at) {
     // "hit enter" cue + a prominent Siri-style burst: heartbeat scale on the
     // orb itself plus staggered sonar-ping rings and a bloom of glow.
-    tl.call(playEnterChime, [], at);
+    tl.call(playEnterClick, [], at);
     tl.to(thinkDots, { opacity: 1, duration: 0.3 }, at);
     tl.to(thinkGlow, { opacity: 0.9, scale: 1.55, duration: 0.35, ease: 'power2.out' }, at)
       .to(thinkGlow, { opacity: 0, duration: 0.5, ease: 'power2.in' }, at + 0.55);
