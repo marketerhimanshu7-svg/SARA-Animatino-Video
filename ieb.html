@@ -168,9 +168,49 @@ body::after {
 #ff-cta { margin-top: 2.6rem; padding: 0.9rem 2.6rem; background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
   color: #fff; font-size: 1.05rem; font-weight: 600; border-radius: 50px; border: none; cursor: pointer;
   opacity: 0; transform: translateY(14px); box-shadow: 0 0 32px rgba(124,58,237,0.4); letter-spacing: 0.01em; }
+
+/* ─── Intro video ────────────────────────────── */
+#intro-stage { position: fixed; inset: 0; z-index: 300; background: #000;
+  display: flex; align-items: center; justify-content: center; }
+#video-frame { position: relative; width: 100vw; height: 56.25vw; max-height: 100vh; max-width: 177.78vh; }
+#video-frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+#screen-overlay { position: absolute; left: 21%; top: 5%; width: 61%; height: 59%; overflow: hidden; pointer-events: none; }
+#intro-orb-avatar { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px; opacity: 0; transform: scale(0.7); }
+#intro-orb-glow { position: absolute; inset: -30%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(139,92,246,0.5) 0%, rgba(99,102,241,0.16) 45%, transparent 72%); filter: blur(16px); }
+#intro-orb-canvas { position: relative; width: 100%; height: 100%; display: block; }
+.orbit-icon { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05));
+  border: 1px solid rgba(255,255,255,0.28); box-shadow: 0 8px 22px rgba(0,0,0,0.5);
+  opacity: 0; font-size: 9px; font-weight: 800; letter-spacing: 0.02em; color: #f1f0ff; }
+.orbit-icon svg { width: 18px; height: 18px; }
 </style>
 </head>
 <body>
+
+<!-- ═══ Intro video — plays once before the IEB animation ═══ -->
+<div id="intro-stage">
+  <div id="video-frame">
+    <video id="intro-video" src="/assets/intro.mp4" autoplay muted playsinline preload="auto"></video>
+    <div id="screen-overlay">
+      <div id="intro-orb-avatar">
+        <div id="intro-orb-glow"></div>
+        <canvas id="intro-orb-canvas" width="480" height="480"></canvas>
+      </div>
+      <div class="orbit-icon" id="icon-sap">SAP</div>
+      <div class="orbit-icon" id="icon-wa">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M4 16.5 L5 13 A6.5 6.5 0 1 1 8 15.5 Z" stroke="#e2e8f0" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="orbit-icon" id="icon-db">
+        <svg viewBox="0 0 20 20" fill="none"><ellipse cx="10" cy="5" rx="6.5" ry="2.4" stroke="#e2e8f0" stroke-width="1.3"/><path d="M3.5 5v10c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4V5" stroke="#e2e8f0" stroke-width="1.3"/><path d="M3.5 10c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4" stroke="#e2e8f0" stroke-width="1.3"/></svg>
+      </div>
+      <div class="orbit-icon" id="icon-outlook">
+        <svg viewBox="0 0 20 20" fill="none"><rect x="2.5" y="4.5" width="15" height="11" rx="1.6" stroke="#e2e8f0" stroke-width="1.3"/><path d="M3 5.5 L10 11 L17 5.5" stroke="#e2e8f0" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div id="bg">
   <div class="orb" id="orb-v1"></div>
@@ -329,27 +369,33 @@ body::after {
 // ═══ IEB ORB — realtime canvas chroma key (green-screen removal) ═══
 (function () {
   const video = document.getElementById('orb-video');
-  const canvas = document.getElementById('orb-canvas');
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  // Both the docked Q&A avatar and the in-video "screen" avatar are keyed
+  // live from this one shared source video.
+  const canvases = [document.getElementById('orb-canvas'), document.getElementById('intro-orb-canvas')].filter(Boolean);
+  const ctxs = canvases.map(function (c) { return c.getContext('2d', { willReadFrequently: true }); });
   let running = false;
+
+  function keyFrame(ctx, canvas) {
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = frame.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      const diff = g - Math.max(r, b);
+      if (diff > 45) {
+        d[i + 3] = 0;
+      } else if (diff > 8) {
+        d[i + 3] = Math.round(255 * (1 - (diff - 8) / 37));
+        const avg = (r + b) * 0.5;
+        if (g > avg) d[i + 1] = avg + (g - avg) * 0.4;
+      }
+    }
+    ctx.putImageData(frame, 0, 0);
+  }
 
   function tick() {
     if (video.readyState >= 2) {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const d = frame.data;
-      for (let i = 0; i < d.length; i += 4) {
-        const r = d[i], g = d[i + 1], b = d[i + 2];
-        const diff = g - Math.max(r, b);
-        if (diff > 45) {
-          d[i + 3] = 0;
-        } else if (diff > 8) {
-          d[i + 3] = Math.round(255 * (1 - (diff - 8) / 37));
-          const avg = (r + b) * 0.5;
-          if (g > avg) d[i + 1] = avg + (g - avg) * 0.4;
-        }
-      }
-      ctx.putImageData(frame, 0, 0);
+      for (let i = 0; i < canvases.length; i++) keyFrame(ctxs[i], canvases[i]);
     }
     requestAnimationFrame(tick);
   }
@@ -424,8 +470,9 @@ function playEnterClick() {
   playKeyClick(1900 + Math.random() * 500, 0.8, 0.42, 0.035, 120, 0.26, 0.09);
 }
 
-// ═══ MASTER TIMELINE ═══
-window.addEventListener('load', function () {
+// ═══ MASTER TIMELINE (the existing orb-intro → Q&A → CTA loop) ═══
+// Started once, after the intro-video sequence below hands off to it.
+function startMainTimeline() {
 
   function typeTo(el, text, duration) {
     const state = { n: 0, last: 0 };
@@ -564,6 +611,48 @@ window.addEventListener('load', function () {
   // at 26.3 + 7.5 + 1.0 = 34.8s) before looping back to the intro.
   tl.to({}, { duration: 0.1 }, 34.8);
 
+}
+
+// ═══ INTRO VIDEO — plays once, ends by compositing the orb + orbiting
+// integration icons onto the on-screen monitor, then punches in to fullscreen
+// and hands off to startMainTimeline(). ═══
+window.addEventListener('load', function () {
+  const introStage = document.getElementById('intro-stage');
+  const videoFrame = document.getElementById('video-frame');
+  const introOrb = document.getElementById('intro-orb-avatar');
+  const icons = Array.prototype.slice.call(document.querySelectorAll('.orbit-icon'));
+
+  function orbitIcon(el, radius, startAngle, sweep, duration) {
+    const state = { a: startAngle };
+    gsap.to(state, {
+      a: startAngle + sweep, duration: duration, ease: 'power1.inOut',
+      onUpdate: function () {
+        el.style.transform = 'translate(' + (Math.cos(state.a) * radius).toFixed(1) + 'px,' + (Math.sin(state.a) * radius).toFixed(1) + 'px)';
+      }
+    });
+  }
+
+  // The source clip locks off on the monitor at ~8.0s and runs to 10s —
+  // adjust this if the cut point in intro.mp4 ever changes.
+  gsap.delayedCall(8.0, function () {
+    gsap.to(introOrb, { opacity: 1, scale: 1, duration: 0.35, ease: 'power2.out' });
+    icons.forEach(function (icon, i) {
+      gsap.to(icon, { opacity: 1, duration: 0.3, delay: i * 0.08 });
+      orbitIcon(icon, 100, (Math.PI * 2 / icons.length) * i, Math.PI * 1.5, 1.55);
+    });
+  });
+
+  // Punch in on the screen until it fills the viewport, then hand off.
+  gsap.delayedCall(9.5, function () {
+    gsap.to(videoFrame, { scale: 1.65, transformOrigin: '52% 35%', duration: 0.9, ease: 'power2.in' });
+    gsap.to(introStage, {
+      opacity: 0, duration: 0.6, delay: 0.35, ease: 'power2.in',
+      onComplete: function () {
+        introStage.style.display = 'none';
+        startMainTimeline();
+      }
+    });
+  });
 });
 </script>
 </body>
