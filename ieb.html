@@ -382,7 +382,7 @@ window.addEventListener('load', function () {
 
   // ── Dock the orb, dismiss intro copy, reveal chat bar ──
   tl.to('#intro-copy', { opacity: 0, y: -14, duration: 0.5, ease: 'power2.in' }, 2.6)
-    .to(orb, { top: '18vh', width: 86, height: 86, marginLeft: -43, marginTop: -43, duration: 0.95, ease: 'power3.inOut' }, 2.7)
+    .to(orb, { top: '17vh', width: 150, height: 150, marginLeft: -75, marginTop: -75, duration: 0.95, ease: 'power3.inOut' }, 2.7)
     .to('#chat-dock', { opacity: 1, duration: 0.6, ease: 'power2.out' }, 3.1);
 
   function thinkPulse(at) {
