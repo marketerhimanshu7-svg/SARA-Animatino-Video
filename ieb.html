@@ -174,21 +174,25 @@ body::after {
   display: flex; align-items: center; justify-content: center; }
 #video-frame { position: relative; width: 100vw; height: 56.25vw; max-height: 100vh; max-width: 177.78vh; }
 #video-frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
-/* Matches the monitor's on-screen bounds measured from the source clip's
-   locked-off frame: TL(385,58) TR(1595,48) BR(1590,708) BL(388,718) of 1920x1080 —
-   a near-rectangle with a slight camera roll, hence the small rotate(). */
-#screen-overlay { position: absolute; left: 20%; top: 4.3%; width: 63%; height: 62%;
-  overflow: hidden; pointer-events: none; transform: rotate(-0.6deg); transform-origin: center; }
+/* The monitor's on-screen bounds are a slight trapezoid, not a plain rectangle
+   (camera wasn't perfectly square-on), measured from the source clip's locked-off
+   frame at 1920x1080: TL(389,46) TR(1601,40) BR(1594,706) BL(366,713).
+   #screen-overlay spans the full video frame; clip-path masks it to that exact
+   quadrilateral so nothing of the original screen content shows past the edges. */
+#screen-overlay { position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+  clip-path: polygon(20.26% 4.26%, 83.39% 3.70%, 83.02% 65.37%, 19.06% 66.02%); }
 #screen-fill { position: absolute; inset: 0; background: #0a0e1a; opacity: 0; }
 #start-gate { position: fixed; inset: 0; z-index: 500; background: #05060d;
   display: flex; align-items: center; justify-content: center; cursor: pointer; }
 #start-gate-btn { padding: 1rem 2.4rem; border-radius: 50px; font-size: 1.05rem; font-weight: 600; color: #fff;
   background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%); box-shadow: 0 0 32px rgba(124,58,237,0.4); }
-#intro-orb-avatar { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px; opacity: 0; transform: scale(0.7); }
+/* Centered on the quadrilateral's centroid (51.43%, 34.84% of the video frame),
+   not a plain 50/50 — the screen's own center is off due to the trapezoid skew. */
+#intro-orb-avatar { position: absolute; left: 51.43%; top: 34.84%; width: 120px; height: 120px; margin: -60px 0 0 -60px; opacity: 0; transform: scale(0.7); }
 #intro-orb-glow { position: absolute; inset: -30%; border-radius: 50%;
   background: radial-gradient(circle, rgba(139,92,246,0.5) 0%, rgba(99,102,241,0.16) 45%, transparent 72%); filter: blur(16px); }
 #intro-orb-canvas { position: relative; width: 100%; height: 100%; display: block; }
-.orbit-icon { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px;
+.orbit-icon { position: absolute; left: 51.43%; top: 34.84%; width: 40px; height: 40px; margin: -20px 0 0 -20px;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
   background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05));
   border: 1px solid rgba(255,255,255,0.28); box-shadow: 0 8px 22px rgba(0,0,0,0.5);
@@ -549,10 +553,11 @@ function startMainTimeline() {
   }
 
   // ═══ Round 1 — sales achievement ═══
+  // Typing runs at a natural ~9 chars/sec (real human pace, not an instant dump).
   tl.call(function () { chatText.textContent = ''; }, [], 3.9);
-  tl.add(typeTo(chatText, 'Sales achievement of Ahmedabad today?', 1.7), 3.9);
-  thinkPulse(5.75);
-  tl.to(ans1, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 6.5);
+  tl.add(typeTo(chatText, 'Sales achievement of Ahmedabad today?', 4.2), 3.9);
+  thinkPulse(8.25);
+  tl.to(ans1, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 9.0);
   tl.call(function () {
     const s1 = { v: 0 };
     gsap.to(s1, {
@@ -577,25 +582,25 @@ function startMainTimeline() {
     path.setAttribute('stroke-dashoffset', len);
     gsap.to(path, { strokeDashoffset: 0, duration: 1.0, delay: 0.2, ease: 'power2.out' });
     gsap.to('#spark-dot', { opacity: 1, duration: 0.3, delay: 1.1 });
-  }, [], 6.5);
-  tl.to(ans1, { opacity: 0, y: -14, duration: 0.45, ease: 'power2.in' }, 10.6);
+  }, [], 9.0);
+  tl.to(ans1, { opacity: 0, y: -14, duration: 0.45, ease: 'power2.in' }, 13.1);
 
   // ═══ Round 2 — dormant distributors ═══
-  tl.call(function () { chatText.textContent = ''; }, [], 11.3);
-  tl.add(typeTo(chatText, 'Show dormant distributors, West zone.', 1.7), 11.3);
-  thinkPulse(13.15);
-  tl.to(ans2, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 13.9);
+  tl.call(function () { chatText.textContent = ''; }, [], 13.8);
+  tl.add(typeTo(chatText, 'Show dormant distributors, West zone.', 4.2), 13.8);
+  thinkPulse(18.15);
+  tl.to(ans2, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 18.9);
   tl.call(function () {
     gsap.fromTo('#dist-list .dist-item', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, stagger: 0.11, ease: 'power2.out' });
     gsap.to('#dist-more', { opacity: 1, duration: 0.4, delay: 0.6 });
-  }, [], 13.9);
-  tl.to(ans2, { opacity: 0, y: -14, duration: 0.45, ease: 'power2.in' }, 18.0);
+  }, [], 18.9);
+  tl.to(ans2, { opacity: 0, y: -14, duration: 0.45, ease: 'power2.in' }, 23.0);
 
   // ═══ Round 3 — lowest growth SKU ═══
-  tl.call(function () { chatText.textContent = ''; }, [], 18.7);
-  tl.add(typeTo(chatText, 'Which SKU has lowest growth this month?', 1.75), 18.7);
-  thinkPulse(20.6);
-  tl.to(ans3, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 21.35);
+  tl.call(function () { chatText.textContent = ''; }, [], 23.7);
+  tl.add(typeTo(chatText, 'Which SKU has lowest growth this month?', 4.6), 23.7);
+  thinkPulse(28.45);
+  tl.to(ans3, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 29.2);
   tl.call(function () {
     const d1 = { v: 0 }, d2 = { v: 0 };
     gsap.to(d1, {
@@ -608,11 +613,11 @@ function startMainTimeline() {
     });
     gsap.fromTo('.sku-block.red', { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.6, ease: 'back.out(1.4)' });
     gsap.fromTo('.sku-block.green', { opacity: 0, x: 16 }, { opacity: 1, x: 0, duration: 0.6, delay: 0.1, ease: 'back.out(1.4)' });
-  }, [], 21.35);
-  tl.to(ans3, { opacity: 0, y: -14, duration: 0.45, ease: 'power2.in' }, 25.4);
+  }, [], 29.2);
+  tl.to(ans3, { opacity: 0, y: -14, duration: 0.45, ease: 'power2.in' }, 33.3);
 
   // ── Wind down + Final frame ──
-  tl.to([orb, '#chat-dock'], { opacity: 0, duration: 0.6, ease: 'power2.in' }, 25.4);
+  tl.to([orb, '#chat-dock'], { opacity: 0, duration: 0.6, ease: 'power2.in' }, 33.3);
 
   tl.call(function () {
     const ff = document.getElementById('final-frame');
@@ -628,11 +633,11 @@ function startMainTimeline() {
       opacity: 0, duration: 1.0, delay: 7.5, ease: 'power2.in',
       onComplete: function () { ff.style.pointerEvents = 'none'; }
     });
-  }, [], 26.3);
+  }, [], 34.2);
 
   // Filler so the timeline holds through the final-frame's fade-out (finishes
-  // at 26.3 + 7.5 + 1.0 = 34.8s) before looping back to the intro.
-  tl.to({}, { duration: 0.1 }, 34.8);
+  // at 34.2 + 7.5 + 1.0 = 42.7s) before looping back to the intro.
+  tl.to({}, { duration: 0.1 }, 42.7);
 
 }
 
@@ -668,26 +673,35 @@ function runIntroSequence() {
     });
   }
 
-  // The source clip locks off on the monitor at ~8.0s and runs to 10s —
-  // adjust this if the cut point in intro.mp4 ever changes.
-  gsap.delayedCall(8.0, function () {
+  // The source clip locks off on the monitor at ~8.0s. Once there, slow the
+  // remaining footage way down (0.35x) so the orbit gets ~5.7s of real time to
+  // play out instead of the ~2s the raw clip would give it.
+  const introVideo = document.getElementById('intro-video');
+  let revealed = false;
+  introVideo.addEventListener('timeupdate', function () {
+    if (revealed || introVideo.currentTime < 8.0) return;
+    revealed = true;
+    introVideo.playbackRate = 0.35;
     gsap.to(document.getElementById('screen-fill'), { opacity: 1, duration: 0.12 });
     gsap.to(introOrb, { opacity: 1, scale: 1, duration: 0.35, ease: 'power2.out' });
     icons.forEach(function (icon, i) {
       gsap.to(icon, { opacity: 1, duration: 0.3, delay: i * 0.08 });
-      orbitIcon(icon, 100, (Math.PI * 2 / icons.length) * i, Math.PI * 1.5, 1.55);
+      orbitIcon(icon, 100, (Math.PI * 2 / icons.length) * i, Math.PI * 2.4, 4.4);
     });
   });
 
-  // Punch in on the screen until it fills the viewport, then hand off.
-  gsap.delayedCall(9.5, function () {
-    gsap.to(videoFrame, { scale: 1.65, transformOrigin: '52% 35%', duration: 0.9, ease: 'power2.in' });
-    gsap.to(introStage, {
-      opacity: 0, duration: 0.6, delay: 0.35, ease: 'power2.in',
-      onComplete: function () {
-        introStage.style.display = 'none';
-        startMainTimeline();
-      }
+  // The (slowed) video naturally runs out around here — that's the cue to
+  // punch in on the screen until it fills the viewport, then hand off.
+  introVideo.addEventListener('ended', function () {
+    gsap.delayedCall(0.4, function () {
+      gsap.to(videoFrame, { scale: 1.65, transformOrigin: '52% 35%', duration: 0.9, ease: 'power2.in' });
+      gsap.to(introStage, {
+        opacity: 0, duration: 0.6, delay: 0.35, ease: 'power2.in',
+        onComplete: function () {
+          introStage.style.display = 'none';
+          startMainTimeline();
+        }
+      });
     });
   });
 }
