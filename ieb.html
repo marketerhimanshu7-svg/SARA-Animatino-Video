@@ -484,15 +484,8 @@ function playKeyClick(bandFreq, bandQ, clickPeak, clickDur, thumpFreq, thumpPeak
   osc.start(t); osc.stop(t + thumpDur + 0.01);
 }
 
-// Real keyboard sound sampled from the intro clip — played once per typed
-// question (not per character), so it sounds like natural human typing
-// rather than a per-letter blip train.
-const typeSample = document.getElementById('type-sample');
-function playTypingSample() {
-  if (!typeSample) return;
-  typeSample.currentTime = 0;
-  typeSample.volume = 0.55;
-  typeSample.play().catch(function () {});
+function playTypeTick() {
+  playKeyClick(2600 + Math.random() * 1800, 0.9, 0.3, 0.024, 150 + Math.random() * 40, 0.13, 0.045);
 }
 
 function playEnterClick() {
@@ -505,11 +498,14 @@ function playEnterClick() {
 function startMainTimeline() {
 
   function typeTo(el, text, duration) {
-    playTypingSample();
-    const state = { n: 0 };
+    const state = { n: 0, last: 0 };
     return gsap.to(state, {
       n: text.length, duration: duration, ease: 'none',
-      onUpdate: function () { el.textContent = text.slice(0, Math.round(state.n)); }
+      onUpdate: function () {
+        const cur = Math.round(state.n);
+        el.textContent = text.slice(0, cur);
+        if (cur > state.last) { state.last = cur; playTypeTick(); }
+      }
     });
   }
 
@@ -553,11 +549,10 @@ function startMainTimeline() {
   }
 
   // ═══ Round 1 — sales achievement ═══
-  // Typing runs at a natural ~9 chars/sec (real human pace, not an instant dump).
   tl.call(function () { chatText.textContent = ''; }, [], 3.9);
-  tl.add(typeTo(chatText, 'Sales achievement of Ahmedabad today?', 4.2), 3.9);
-  thinkPulse(8.25);
-  tl.to(ans1, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 9.0);
+  tl.add(typeTo(chatText, 'Sales achievement of Ahmedabad today?', 1.7), 3.9);
+  thinkPulse(5.75);
+  tl.to(ans1, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 6.5);
   tl.call(function () {
     const s1 = { v: 0 };
     gsap.to(s1, {
@@ -582,25 +577,25 @@ function startMainTimeline() {
     path.setAttribute('stroke-dashoffset', len);
     gsap.to(path, { strokeDashoffset: 0, duration: 1.0, delay: 0.2, ease: 'power2.out' });
     gsap.to('#spark-dot', { opacity: 1, duration: 0.3, delay: 1.1 });
-  }, [], 9.0);
-  tl.to(ans1, { opacity: 0, y: -14, duration: 0.45, ease: 'power2.in' }, 13.1);
+  }, [], 6.5);
+  tl.to(ans1, { opacity: 0, y: -14, duration: 0.45, ease: 'power2.in' }, 10.6);
 
   // ═══ Round 2 — dormant distributors ═══
-  tl.call(function () { chatText.textContent = ''; }, [], 13.8);
-  tl.add(typeTo(chatText, 'Show dormant distributors, West zone.', 4.2), 13.8);
-  thinkPulse(18.15);
-  tl.to(ans2, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 18.9);
+  tl.call(function () { chatText.textContent = ''; }, [], 11.3);
+  tl.add(typeTo(chatText, 'Show dormant distributors, West zone.', 1.7), 11.3);
+  thinkPulse(13.15);
+  tl.to(ans2, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 13.9);
   tl.call(function () {
     gsap.fromTo('#dist-list .dist-item', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, stagger: 0.11, ease: 'power2.out' });
     gsap.to('#dist-more', { opacity: 1, duration: 0.4, delay: 0.6 });
-  }, [], 18.9);
-  tl.to(ans2, { opacity: 0, y: -14, duration: 0.45, ease: 'power2.in' }, 23.0);
+  }, [], 13.9);
+  tl.to(ans2, { opacity: 0, y: -14, duration: 0.45, ease: 'power2.in' }, 18.0);
 
   // ═══ Round 3 — lowest growth SKU ═══
-  tl.call(function () { chatText.textContent = ''; }, [], 23.7);
-  tl.add(typeTo(chatText, 'Which SKU has lowest growth this month?', 4.6), 23.7);
-  thinkPulse(28.45);
-  tl.to(ans3, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 29.2);
+  tl.call(function () { chatText.textContent = ''; }, [], 18.7);
+  tl.add(typeTo(chatText, 'Which SKU has lowest growth this month?', 1.75), 18.7);
+  thinkPulse(20.6);
+  tl.to(ans3, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 21.35);
   tl.call(function () {
     const d1 = { v: 0 }, d2 = { v: 0 };
     gsap.to(d1, {
@@ -613,11 +608,11 @@ function startMainTimeline() {
     });
     gsap.fromTo('.sku-block.red', { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.6, ease: 'back.out(1.4)' });
     gsap.fromTo('.sku-block.green', { opacity: 0, x: 16 }, { opacity: 1, x: 0, duration: 0.6, delay: 0.1, ease: 'back.out(1.4)' });
-  }, [], 29.2);
-  tl.to(ans3, { opacity: 0, y: -14, duration: 0.45, ease: 'power2.in' }, 33.3);
+  }, [], 21.35);
+  tl.to(ans3, { opacity: 0, y: -14, duration: 0.45, ease: 'power2.in' }, 25.4);
 
   // ── Wind down + Final frame ──
-  tl.to([orb, '#chat-dock'], { opacity: 0, duration: 0.6, ease: 'power2.in' }, 33.3);
+  tl.to([orb, '#chat-dock'], { opacity: 0, duration: 0.6, ease: 'power2.in' }, 25.4);
 
   tl.call(function () {
     const ff = document.getElementById('final-frame');
@@ -633,11 +628,11 @@ function startMainTimeline() {
       opacity: 0, duration: 1.0, delay: 7.5, ease: 'power2.in',
       onComplete: function () { ff.style.pointerEvents = 'none'; }
     });
-  }, [], 34.2);
+  }, [], 26.3);
 
   // Filler so the timeline holds through the final-frame's fade-out (finishes
-  // at 34.2 + 7.5 + 1.0 = 42.7s) before looping back to the intro.
-  tl.to({}, { duration: 0.1 }, 42.7);
+  // at 26.3 + 7.5 + 1.0 = 34.8s) before looping back to the intro.
+  tl.to({}, { duration: 0.1 }, 34.8);
 
 }
 
@@ -673,25 +668,23 @@ function runIntroSequence() {
     });
   }
 
-  // The source clip locks off on the monitor at ~8.0s. Once there, slow the
-  // remaining footage way down (0.35x) so the orbit gets ~5.7s of real time to
-  // play out instead of the ~2s the raw clip would give it.
+  // The source clip locks off on the monitor at ~8.0s and plays at normal
+  // speed through to its natural end (~10s).
   const introVideo = document.getElementById('intro-video');
   let revealed = false;
   introVideo.addEventListener('timeupdate', function () {
     if (revealed || introVideo.currentTime < 8.0) return;
     revealed = true;
-    introVideo.playbackRate = 0.35;
     gsap.to(document.getElementById('screen-fill'), { opacity: 1, duration: 0.12 });
     gsap.to(introOrb, { opacity: 1, scale: 1, duration: 0.35, ease: 'power2.out' });
     icons.forEach(function (icon, i) {
       gsap.to(icon, { opacity: 1, duration: 0.3, delay: i * 0.08 });
-      orbitIcon(icon, 100, (Math.PI * 2 / icons.length) * i, Math.PI * 2.4, 4.4);
+      orbitIcon(icon, 100, (Math.PI * 2 / icons.length) * i, Math.PI * 1.5, 1.55);
     });
   });
 
-  // The (slowed) video naturally runs out around here — that's the cue to
-  // punch in on the screen until it fills the viewport, then hand off.
+  // The video naturally runs out around here — that's the cue to punch in on
+  // the screen until it fills the viewport, then hand off.
   introVideo.addEventListener('ended', function () {
     gsap.delayedCall(0.4, function () {
       gsap.to(videoFrame, { scale: 1.65, transformOrigin: '52% 35%', duration: 0.9, ease: 'power2.in' });
