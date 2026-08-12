@@ -174,8 +174,16 @@ body::after {
   display: flex; align-items: center; justify-content: center; }
 #video-frame { position: relative; width: 100vw; height: 56.25vw; max-height: 100vh; max-width: 177.78vh; }
 #video-frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
-#screen-overlay { position: absolute; left: 21%; top: 5%; width: 61%; height: 59%; overflow: hidden; pointer-events: none; }
+/* Matches the monitor's on-screen bounds measured from the source clip's
+   locked-off frame: TL(385,58) TR(1595,48) BR(1590,708) BL(388,718) of 1920x1080 —
+   a near-rectangle with a slight camera roll, hence the small rotate(). */
+#screen-overlay { position: absolute; left: 20%; top: 4.3%; width: 63%; height: 62%;
+  overflow: hidden; pointer-events: none; transform: rotate(-0.6deg); transform-origin: center; }
 #screen-fill { position: absolute; inset: 0; background: #0a0e1a; opacity: 0; }
+#start-gate { position: fixed; inset: 0; z-index: 500; background: #05060d;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; }
+#start-gate-btn { padding: 1rem 2.4rem; border-radius: 50px; font-size: 1.05rem; font-weight: 600; color: #fff;
+  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%); box-shadow: 0 0 32px rgba(124,58,237,0.4); }
 #intro-orb-avatar { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px; opacity: 0; transform: scale(0.7); }
 #intro-orb-glow { position: absolute; inset: -30%; border-radius: 50%;
   background: radial-gradient(circle, rgba(139,92,246,0.5) 0%, rgba(99,102,241,0.16) 45%, transparent 72%); filter: blur(16px); }
@@ -191,9 +199,11 @@ body::after {
 <body>
 
 <!-- ═══ Intro video — plays once before the IEB animation ═══ -->
+<div id="start-gate"><div id="start-gate-btn">Tap to begin</div></div>
+
 <div id="intro-stage">
   <div id="video-frame">
-    <video id="intro-video" src="/assets/intro.mp4" autoplay muted playsinline preload="auto"></video>
+    <video id="intro-video" src="/assets/intro.mp4" muted playsinline preload="auto"></video>
     <div id="screen-overlay">
       <div id="screen-fill"></div>
       <div id="intro-orb-avatar">
@@ -629,7 +639,20 @@ function startMainTimeline() {
 // ═══ INTRO VIDEO — plays once, ends by compositing the orb + orbiting
 // integration icons onto the on-screen monitor, then punches in to fullscreen
 // and hands off to startMainTimeline(). ═══
-window.addEventListener('load', function () {
+// Browsers block audio (video sound AND our Web Audio cues) until a real user
+// gesture happens, so nothing autoplays: a start gate captures that gesture,
+// then plays the video WITH its sound from frame one, in sync.
+document.getElementById('start-gate').addEventListener('click', function () {
+  const gate = document.getElementById('start-gate');
+  gate.style.display = 'none';
+  unlockAV();
+  const introVideo = document.getElementById('intro-video');
+  introVideo.muted = false;
+  introVideo.play().catch(function () {});
+  runIntroSequence();
+}, { once: true });
+
+function runIntroSequence() {
   const introStage = document.getElementById('intro-stage');
   const videoFrame = document.getElementById('video-frame');
   const introOrb = document.getElementById('intro-orb-avatar');
@@ -667,7 +690,7 @@ window.addEventListener('load', function () {
       }
     });
   });
-});
+}
 </script>
 </body>
 </html>
