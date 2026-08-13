@@ -71,6 +71,16 @@ const SUBS = process.env.IEB_SUBS ? JSON.parse(process.env.IEB_SUBS) : {};
   }, null, 2));
   console.log('CLICK', clickedAt, 'chromeOffset', chromeOffset, 'inner', innerSize.join('x'));
 
-  await page.waitForTimeout(RUN_SECONDS * 1000);
+  // Stop when the animation says it's done (?once=1 sets this once the outro is
+  // up and held), not on a stopwatch — that's what previously let the recording
+  // run past the end and into the next loop.
+  try {
+    await page.waitForFunction(() => window.__iebDone === true, null,
+      { timeout: RUN_SECONDS * 1000, polling: 100 });
+    console.log('DONE signalled at', ((Date.now() / 1000) - clickedAt).toFixed(2), 's after click');
+  } catch (e) {
+    console.log('WARN: no done signal within', RUN_SECONDS, 's — stopping anyway');
+  }
+  await page.waitForTimeout(400);
   await browser.close();
 })();

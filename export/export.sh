@@ -75,7 +75,7 @@ ffmpeg -y -loglevel error -nostdin \
 FFMPEG_PID=$!
 sleep 2
 
-IEB_URL="http://localhost:$PORT/ieb.html" \
+IEB_URL="http://localhost:$PORT/ieb.html?once=1" \
 IEB_OUT="$WORK" \
 IEB_RUN_SECONDS="$RUN_SECONDS" \
 IEB_WIDTH="$((W + 1))" IEB_HEIGHT="$CAP_H" \

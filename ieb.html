@@ -605,7 +605,11 @@ function startMainTimeline() {
 
   gsap.set([ans1, ans2, ans3], { y: 14 });
 
-  const tl = gsap.timeline({ repeat: -1 });
+  // ?once=1 plays the piece exactly once and holds on the outro — that's the
+  // mode the video export uses, so the file ends on the CTA instead of fading
+  // out and starting over. Without it the page loops forever, as on the site.
+  const ONCE = new URLSearchParams(location.search).has('once');
+  const tl = gsap.timeline({ repeat: ONCE ? 0 : -1 });
 
   // ── Intro: orb + wordmark ──
   // The orb is ALREADY on screen here — the intro zoom flew it into exactly this
@@ -710,10 +714,15 @@ function startMainTimeline() {
       gsap.to(el, { opacity: 1, y: 0, duration: 0.6, delay: 0.35 + i * 0.26, ease: 'power3.out' });
     });
     gsap.to('#ff-cta', { boxShadow: '0 0 52px rgba(124,58,237,0.75)', duration: 1.5, delay: 2.0, repeat: -1, yoyo: true, ease: 'sine.inOut' });
-    gsap.to(ff, {
-      opacity: 0, duration: 1.0, delay: 7.5, ease: 'power2.in',
-      onComplete: function () { ff.style.pointerEvents = 'none'; }
-    });
+    if (ONCE) {
+      // hold the outro on screen and tell the recorder we're finished
+      gsap.delayedCall(4.5, function () { window.__iebDone = true; });
+    } else {
+      gsap.to(ff, {
+        opacity: 0, duration: 1.0, delay: 7.5, ease: 'power2.in',
+        onComplete: function () { ff.style.pointerEvents = 'none'; }
+      });
+    }
   }, [], 26.3);
 
   // Filler so the timeline holds through the final-frame's fade-out (finishes
