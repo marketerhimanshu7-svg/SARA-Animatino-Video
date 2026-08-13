@@ -31,20 +31,23 @@ body::after {
   background: #0a0e1a;
   background-image: radial-gradient(ellipse at 50% 38%, #171b33 0%, #10132a 55%, #070812 100%);
 }
-.orb { position: absolute; border-radius: 50%; pointer-events: none; filter: blur(90px); }
+/* Ambient orbs stay PUT — drifting a 90px-blurred 700px layer forces a full
+   re-raster every frame, which is what made the glow behind the chat card look
+   choppy. They only breathe in opacity now (compositor-only, never repaints). */
+.orb { position: absolute; border-radius: 50%; pointer-events: none; filter: blur(90px); will-change: opacity; }
 #orb-v1 { width: 720px; height: 660px; top: -20%; right: -10%;
   background: radial-gradient(circle at 45% 45%, rgba(139,92,246,0.30) 0%, rgba(99,102,241,0.12) 45%, transparent 68%);
-  animation: pulse1 15s ease-in-out infinite; }
+  animation: glowWave1 11s ease-in-out infinite; }
 #orb-v2 { width: 680px; height: 680px; bottom: -16%; left: -8%;
   background: radial-gradient(circle at 50% 50%, rgba(56,189,248,0.16) 0%, transparent 68%);
-  animation: pulse2 18s ease-in-out infinite; }
+  animation: glowWave2 13s ease-in-out infinite; }
 #orb-v3 { width: 520px; height: 460px; top: 20%; left: 4%;
   background: radial-gradient(circle at 50% 50%, rgba(167,139,250,0.24) 0%, transparent 70%);
-  animation: pulse3 21s ease-in-out infinite; }
+  animation: glowWave3 9s ease-in-out infinite; }
 
-@keyframes pulse1 { 0%,100%{transform:translate(0,0) scale(1);} 35%{transform:translate(-40px,30px) scale(1.09);} 68%{transform:translate(20px,-22px) scale(0.95);} }
-@keyframes pulse2 { 0%,100%{transform:translate(0,0) scale(1);} 42%{transform:translate(50px,-42px) scale(1.11);} 72%{transform:translate(-28px,25px) scale(0.93);} }
-@keyframes pulse3 { 0%,100%{transform:translate(0,0) scale(1);} 50%{transform:translate(58px,-50px) scale(1.16);} }
+@keyframes glowWave1 { 0%,100%{ opacity:0.72; } 50%{ opacity:1; } }
+@keyframes glowWave2 { 0%,100%{ opacity:1; } 50%{ opacity:0.66; } }
+@keyframes glowWave3 { 0%,100%{ opacity:0.8; } 45%{ opacity:1; } }
 
 #grid-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
@@ -89,14 +92,39 @@ body::after {
 
 /* ─── Chat dock ─────────────────────────────── */
 #chat-dock { position: fixed; left: 50%; top: 41vh; transform: translate(-50%,-50%); width: 620px; max-width: 84vw; z-index: 55; opacity: 0; }
+
+/* Neon bloom hugging the bar: warm on the left, cool on the right. These never
+   move — they only swell/fade in place, so the light reads as a wave breathing
+   through the bar rather than a blob sliding around behind it. */
+#chat-glow { position: absolute; inset: -40px -28px; pointer-events: none; z-index: -1; }
+.cglow { position: absolute; top: 50%; width: 58%; height: 235%; transform: translateY(-50%);
+  border-radius: 50%; filter: blur(34px); will-change: opacity, transform; }
+.cglow.warm { left: -7%;
+  background: radial-gradient(ellipse at 50% 50%, rgba(255,132,66,0.75) 0%, rgba(255,80,36,0.26) 44%, transparent 72%);
+  animation: cwave1 4.6s ease-in-out infinite; }
+.cglow.cool { right: -7%;
+  background: radial-gradient(ellipse at 50% 50%, rgba(70,140,255,0.75) 0%, rgba(48,86,255,0.26) 44%, transparent 72%);
+  animation: cwave2 5.9s ease-in-out infinite; }
+@keyframes cwave1 { 0%,100%{ opacity:0.62; transform:translateY(-50%) scale(0.94,1); } 50%{ opacity:1; transform:translateY(-50%) scale(1.08,1.04); } }
+@keyframes cwave2 { 0%,100%{ opacity:1; transform:translateY(-50%) scale(1.06,1.03); } 50%{ opacity:0.6; transform:translateY(-50%) scale(0.93,1); } }
+
 #chat-bar {
+  position: relative;
   display: flex; align-items: center; gap: 12px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
-  border: 1px solid rgba(180,165,255,0.25);
+  background: linear-gradient(180deg, #14141c 0%, #0d0d14 100%);
+  border: 1px solid rgba(255,255,255,0.10);
   border-radius: 100px;
   padding: 16px 24px;
-  box-shadow: 0 24px 60px rgba(10,6,30,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+  box-shadow: 0 24px 60px rgba(10,6,30,0.5), inset 0 1px 0 rgba(255,255,255,0.07);
 }
+/* the lit rim itself — a gradient edge blurred just enough to read as neon */
+#chat-bar::before {
+  content: ''; position: absolute; inset: -1.5px; border-radius: inherit; z-index: -1;
+  background: linear-gradient(96deg, #ff8a4a 0%, #d06a8a 34%, #7c6cff 62%, #4a92ff 100%);
+  filter: blur(3.5px); opacity: 0.9;
+  animation: rimWave 5.2s ease-in-out infinite;
+}
+@keyframes rimWave { 0%,100%{ opacity:0.72; } 50%{ opacity:1; } }
 #chat-text-wrap { flex: 1; font-size: clamp(0.95rem, 1.9vw, 1.15rem); font-weight: 500; color: #f1f0ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #chat-caret { display: inline-block; width: 2px; height: 1.1em; background: #a78bfa; margin-left: 2px; vertical-align: -0.15em; animation: caretBlink 0.9s steps(1) infinite; }
 @keyframes caretBlink { 50% { opacity: 0; } }
@@ -186,18 +214,52 @@ body::after {
   display: flex; align-items: center; justify-content: center; cursor: pointer; }
 #start-gate-btn { padding: 1rem 2.4rem; border-radius: 50px; font-size: 1.05rem; font-weight: 600; color: #fff;
   background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%); box-shadow: 0 0 32px rgba(124,58,237,0.4); }
-/* Centered on the quadrilateral's centroid (51.43%, 34.84% of the video frame),
-   not a plain 50/50 — the screen's own center is off due to the trapezoid skew. */
-#intro-orb-avatar { position: absolute; left: 51.43%; top: 34.84%; width: 120px; height: 120px; margin: -60px 0 0 -60px; opacity: 0; transform: scale(0.7); }
+/* Everything that lives ON the monitor sits in this box — the bounding rect of
+   the screen quadrilateral, so on-screen UI can be laid out in plain
+   percentages while clip-path still trims it to the exact screen edges. */
+#screen-ui { position: absolute; left: 19.06%; top: 3.70%; width: 64.33%; height: 62.32%;
+  container-type: size; }
+
+#intro-orb-avatar { position: absolute; left: 50%; top: 27%; height: 20%; aspect-ratio: 1 / 1;
+  transform: translate(-50%,-50%) scale(0.7); opacity: 0; }
 #intro-orb-glow { position: absolute; inset: -30%; border-radius: 50%;
-  background: radial-gradient(circle, rgba(139,92,246,0.5) 0%, rgba(99,102,241,0.16) 45%, transparent 72%); filter: blur(16px); }
+  background: radial-gradient(circle, rgba(139,92,246,0.55) 0%, rgba(99,102,241,0.18) 45%, transparent 72%); filter: blur(20px);
+  animation: orbBreathe 3.2s ease-in-out infinite; }
 #intro-orb-canvas { position: relative; width: 100%; height: 100%; display: block; }
-.orbit-icon { position: absolute; left: 51.43%; top: 34.84%; width: 40px; height: 40px; margin: -20px 0 0 -20px;
+.orbit-icon { position: absolute; left: 50%; top: 27%; width: 5.6%; aspect-ratio: 1 / 1; margin: -2.8% 0 0 -2.8%;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
   background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05));
   border: 1px solid rgba(255,255,255,0.28); box-shadow: 0 8px 22px rgba(0,0,0,0.5);
-  opacity: 0; font-size: 9px; font-weight: 800; letter-spacing: 0.02em; color: #f1f0ff; }
-.orbit-icon svg { width: 18px; height: 18px; }
+  opacity: 0; font-size: 1.5cqw; font-weight: 800; letter-spacing: 0.02em; color: #f1f0ff; }
+.orbit-icon svg { width: 45%; height: 45%; }
+
+/* mini IEB chat, on the monitor */
+/* the wrapper carries the fade, so #su-bar never becomes its own stacking
+   context and its z-index:-1 neon rim can still sit BEHIND the bar */
+#su-bar-wrap { position: absolute; left: 50%; top: 55%; transform: translate(-50%,-50%); width: 84%; opacity: 0; }
+#su-bar { position: relative;
+  display: flex; align-items: center; gap: 1.2%;
+  background: linear-gradient(180deg, #14141c 0%, #0d0d14 100%);
+  border: 1px solid rgba(255,255,255,0.10); border-radius: 100px;
+  padding: 1.9% 3%; }
+#su-bar::before { content: ''; position: absolute; inset: -1.5px; border-radius: inherit; z-index: -1;
+  background: linear-gradient(96deg, #ff8a4a 0%, #d06a8a 34%, #7c6cff 62%, #4a92ff 100%);
+  filter: blur(3px); opacity: 0.85; }
+#su-spark { color: #a78bfa; font-size: 2.2cqh; flex-shrink: 0; }
+#su-text { font-size: 2.6cqh; font-weight: 500; color: #f1f0ff; white-space: nowrap; }
+#su-caret { display: inline-block; width: 2px; height: 2.4cqh; background: #a78bfa; margin-left: 2px;
+  vertical-align: -0.15em; animation: caretBlink 0.9s steps(1) infinite; }
+
+#su-answer { position: absolute; left: 50%; top: 79%; transform: translate(-50%,-50%); width: 84%;
+  background: linear-gradient(180deg, #141a30, #0d1122); border: 1px solid rgba(150,135,255,0.22);
+  border-radius: 2.4cqh; padding: 2.4% 3%; opacity: 0; }
+#su-ans-head { font-size: 2.3cqh; font-weight: 700; color: #fff; margin-bottom: 1.4%; }
+#su-ans-head b { color: #f87171; }
+.su-row { display: flex; align-items: center; justify-content: space-between;
+  padding: 1.15% 0; border-bottom: 1px solid rgba(150,135,255,0.10); opacity: 0; }
+.su-row:last-child { border-bottom: none; }
+.su-row span { font-size: 2.2cqh; font-weight: 600; color: #eceafd; }
+.su-row b { font-size: 2.4cqh; font-weight: 800; color: #f87171; }
 </style>
 </head>
 <body>
@@ -210,19 +272,35 @@ body::after {
     <video id="intro-video" src="/assets/intro.mp4" muted playsinline preload="auto"></video>
     <div id="screen-overlay">
       <div id="screen-fill"></div>
-      <div id="intro-orb-avatar">
-        <div id="intro-orb-glow"></div>
-        <canvas id="intro-orb-canvas" width="480" height="480"></canvas>
-      </div>
-      <div class="orbit-icon" id="icon-sap">SAP</div>
-      <div class="orbit-icon" id="icon-wa">
-        <svg viewBox="0 0 20 20" fill="none"><path d="M4 16.5 L5 13 A6.5 6.5 0 1 1 8 15.5 Z" stroke="#e2e8f0" stroke-width="1.4" stroke-linejoin="round"/></svg>
-      </div>
-      <div class="orbit-icon" id="icon-db">
-        <svg viewBox="0 0 20 20" fill="none"><ellipse cx="10" cy="5" rx="6.5" ry="2.4" stroke="#e2e8f0" stroke-width="1.3"/><path d="M3.5 5v10c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4V5" stroke="#e2e8f0" stroke-width="1.3"/><path d="M3.5 10c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4" stroke="#e2e8f0" stroke-width="1.3"/></svg>
-      </div>
-      <div class="orbit-icon" id="icon-outlook">
-        <svg viewBox="0 0 20 20" fill="none"><rect x="2.5" y="4.5" width="15" height="11" rx="1.6" stroke="#e2e8f0" stroke-width="1.3"/><path d="M3 5.5 L10 11 L17 5.5" stroke="#e2e8f0" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <div id="screen-ui">
+        <div id="intro-orb-avatar">
+          <div id="intro-orb-glow"></div>
+          <canvas id="intro-orb-canvas" width="320" height="320"></canvas>
+        </div>
+        <div class="orbit-icon" id="icon-sap">SAP</div>
+        <div class="orbit-icon" id="icon-wa">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M4 16.5 L5 13 A6.5 6.5 0 1 1 8 15.5 Z" stroke="#e2e8f0" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="orbit-icon" id="icon-db">
+          <svg viewBox="0 0 20 20" fill="none"><ellipse cx="10" cy="5" rx="6.5" ry="2.4" stroke="#e2e8f0" stroke-width="1.3"/><path d="M3.5 5v10c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4V5" stroke="#e2e8f0" stroke-width="1.3"/><path d="M3.5 10c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4" stroke="#e2e8f0" stroke-width="1.3"/></svg>
+        </div>
+        <div class="orbit-icon" id="icon-outlook">
+          <svg viewBox="0 0 20 20" fill="none"><rect x="2.5" y="4.5" width="15" height="11" rx="1.6" stroke="#e2e8f0" stroke-width="1.3"/><path d="M3 5.5 L10 11 L17 5.5" stroke="#e2e8f0" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </div>
+
+        <div id="su-bar-wrap">
+          <div id="su-bar">
+            <span id="su-spark">✦</span>
+            <span id="su-text"></span><span id="su-caret"></span>
+          </div>
+        </div>
+
+        <div id="su-answer">
+          <div id="su-ans-head"><b>3 SKUs</b> below plan this season</div>
+          <div class="su-row"><span>Tubs 200 ml</span><b>−12%</b></div>
+          <div class="su-row"><span>Sachets 10 ml</span><b>−9%</b></div>
+          <div class="su-row"><span>Cans 330 ml</span><b>−4%</b></div>
+        </div>
       </div>
     </div>
   </div>
@@ -244,7 +322,7 @@ body::after {
   <div class="think-ring" id="think-ring-3"></div>
   <video id="orb-video" src="/assets/ieb-orb.mp4" muted loop playsinline autoplay preload="auto"></video>
   <audio id="type-sample" src="/assets/typing-sample.mp3" preload="auto"></audio>
-  <canvas id="orb-canvas" width="480" height="480"></canvas>
+  <canvas id="orb-canvas" width="320" height="320" data-off="1"></canvas>
 </div>
 
 <div id="intro-copy">
@@ -254,6 +332,7 @@ body::after {
 </div>
 
 <div id="chat-dock">
+  <div id="chat-glow"><div class="cglow warm"></div><div class="cglow cool"></div></div>
   <div id="chat-bar">
     <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0;">
       <path d="M10 2 L11.6 8.4 L18 10 L11.6 11.6 L10 18 L8.4 11.6 L2 10 L8.4 8.4 Z" fill="#a78bfa"/>
@@ -410,9 +489,15 @@ body::after {
     ctx.putImageData(frame, 0, 0);
   }
 
+  // Keying is a per-pixel JS pass, so only run it for the canvas that is
+  // actually on screen — doing both all the time is what starved the zoom of
+  // frame budget and made it stutter.
   function tick() {
     if (video.readyState >= 2) {
-      for (let i = 0; i < canvases.length; i++) keyFrame(ctxs[i], canvases[i]);
+      for (let i = 0; i < canvases.length; i++) {
+        if (canvases[i].dataset.off === '1') continue;
+        keyFrame(ctxs[i], canvases[i]);
+      }
     }
     requestAnimationFrame(tick);
   }
@@ -523,8 +608,9 @@ function startMainTimeline() {
   const tl = gsap.timeline({ repeat: -1 });
 
   // ── Intro: orb + wordmark ──
-  tl.to(orb, { opacity: 1, duration: 0.8, ease: 'power2.out' }, 0.2)
-    .fromTo(orb, { scale: 0.7 }, { scale: 1, duration: 1.0, ease: 'back.out(1.6)' }, 0.2)
+  // The orb is ALREADY on screen here — the intro zoom flew it into exactly this
+  // spot and size, so it must not pop or re-fade. It just carries straight on.
+  tl.set(orb, { opacity: 1, scale: 1, top: '30vh', width: 210, height: 210, marginLeft: -105, marginTop: -105 }, 0)
     .to('.ieb-word', { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, 0.7)
     .to('.ieb-full', { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 0.95)
     .to('.ieb-tag', { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 1.15);
@@ -656,11 +742,15 @@ function runIntroSequence() {
   const introStage = document.getElementById('intro-stage');
   const videoFrame = document.getElementById('video-frame');
   const introOrb = document.getElementById('intro-orb-avatar');
+  const introVideo = document.getElementById('intro-video');
   const icons = Array.prototype.slice.call(document.querySelectorAll('.orbit-icon'));
+  const suText = document.getElementById('su-text');
 
-  function orbitIcon(el, radius, startAngle, sweep, duration) {
+  // Orbit is driven off the icon's own translate so it composes with the
+  // container's percentage positioning.
+  function orbitTween(el, radius, startAngle, sweep, duration) {
     const state = { a: startAngle };
-    gsap.to(state, {
+    return gsap.to(state, {
       a: startAngle + sweep, duration: duration, ease: 'power1.inOut',
       onUpdate: function () {
         el.style.transform = 'translate(' + (Math.cos(state.a) * radius).toFixed(1) + 'px,' + (Math.sin(state.a) * radius).toFixed(1) + 'px)';
@@ -668,35 +758,98 @@ function runIntroSequence() {
     });
   }
 
-  // The source clip locks off on the monitor at ~8.0s and plays at normal
-  // speed through to its natural end (~10s).
-  const introVideo = document.getElementById('intro-video');
-  let revealed = false;
-  introVideo.addEventListener('timeupdate', function () {
-    if (revealed || introVideo.currentTime < 8.0) return;
-    revealed = true;
-    gsap.to(document.getElementById('screen-fill'), { opacity: 1, duration: 0.12 });
-    gsap.to(introOrb, { opacity: 1, scale: 1, duration: 0.35, ease: 'power2.out' });
-    icons.forEach(function (icon, i) {
-      gsap.to(icon, { opacity: 1, duration: 0.3, delay: i * 0.08 });
-      orbitIcon(icon, 100, (Math.PI * 2 / icons.length) * i, Math.PI * 1.5, 1.55);
+  function typeToEl(el, text, duration) {
+    const state = { n: 0 };
+    return gsap.to(state, {
+      n: text.length, duration: duration, ease: 'none',
+      onUpdate: function () { el.textContent = text.slice(0, Math.round(state.n)); }
     });
-  });
+  }
 
-  // The video naturally runs out around here — that's the cue to punch in on
-  // the screen until it fills the viewport, then hand off.
-  introVideo.addEventListener('ended', function () {
-    gsap.delayedCall(0.4, function () {
-      gsap.to(videoFrame, { scale: 1.65, transformOrigin: '52% 35%', duration: 0.9, ease: 'power2.in' });
-      gsap.to(introStage, {
-        opacity: 0, duration: 0.6, delay: 0.35, ease: 'power2.in',
-        onComplete: function () {
-          introStage.style.display = 'none';
-          startMainTimeline();
-        }
-      });
-    });
+  // The source clip locks off on the monitor at ~8.0s and plays out at normal
+  // speed; the screen sequence then keeps running over the held final frame.
+  let revealed = false;
+  function maybeStart() {
+    if (revealed) return;
+    revealed = true;
+    runScreenSequence();
+  }
+  introVideo.addEventListener('timeupdate', function () {
+    if (introVideo.currentTime >= 8.0) maybeStart();
   });
+  introVideo.addEventListener('ended', maybeStart);
+
+  function runScreenSequence() {
+    // ── Lock the camera's pivot onto the orb ONCE, up front ────────────────
+    // Every later move (the slow push and the punch-in) scales about this same
+    // point, so the orb never slides sideways and the whole thing reads as one
+    // continuous camera move instead of two separate zooms.
+    const fr = videoFrame.getBoundingClientRect();
+    const or0 = introOrb.getBoundingClientRect();
+    const orbCx = or0.left + or0.width / 2;
+    const orbCy = or0.top + or0.height / 2;
+    gsap.set(videoFrame, {
+      transformOrigin: ((orbCx - fr.left) / fr.width * 100) + '% ' + ((orbCy - fr.top) / fr.height * 100) + '%',
+      force3D: true
+    });
+
+    // Where the orb has to land: exactly on top of the full-screen orb, at its
+    // exact size — so the swap at the end is invisible.
+    const mainOrbEl = document.getElementById('orb-avatar');
+    const mr = mainOrbEl.getBoundingClientRect();
+    const targetScale = mr.width / or0.width;
+    const dx = (mr.left + mr.width / 2) - orbCx;
+    const dy = (mr.top + mr.height / 2) - orbCy;
+
+    const ORBIT_R = or0.width * 1.02;
+    const t = gsap.timeline();
+
+    // ── The screen wakes up ────────────────────────────────────────────────
+    t.to('#screen-fill', { opacity: 1, duration: 0.15 }, 0);
+    t.to(introOrb, { opacity: 1, scale: 1, duration: 0.5, ease: 'back.out(1.6)' }, 0.05);
+
+    // systems come online and circle the orb
+    icons.forEach(function (icon, i) {
+      const a0 = (Math.PI * 2 / icons.length) * i - Math.PI / 2;
+      t.to(icon, { opacity: 1, duration: 0.3 }, 0.35 + i * 0.09);
+      t.add(orbitTween(icon, ORBIT_R, a0, Math.PI * 1.35, 3.6), 0.35 + i * 0.09);
+    });
+    // ...then get pulled into it — "connected to everything"
+    t.to(icons, { opacity: 0, scale: 0.35, duration: 0.5, ease: 'power2.in' }, 3.5);
+
+    // ── Harsh asks his question ────────────────────────────────────────────
+    t.fromTo('#su-bar-wrap', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 3.0);
+    t.add(typeToEl(suText, 'Which SKUs are not performing this season?', 2.1), 3.5);
+    t.call(playEnterClick, [], 5.75);
+
+    // ── IEB answers, on the monitor ────────────────────────────────────────
+    t.fromTo('#su-answer', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, 6.15);
+    t.fromTo('.su-row', { opacity: 0, x: -12 }, { opacity: 1, x: 0, duration: 0.4, stagger: 0.16, ease: 'power2.out' }, 6.4);
+
+    // ── One continuous camera move ─────────────────────────────────────────
+    // A slow accelerating push runs underneath the whole beat above, then rolls
+    // straight into the punch-in without ever coming to rest.
+    t.to(videoFrame, { scale: 1.16, duration: 7.6, ease: 'power2.in' }, 0);
+    t.to(videoFrame, { scale: targetScale, x: dx, y: dy, duration: 2.0, ease: 'power2.inOut' }, 7.6);
+
+    // the office falls away, leaving only the orb flying toward its mark.
+    // #screen-fill stays fully opaque the whole way in — fading it would let the
+    // clip's original desktop show through, and that screen is ours now.
+    t.to(['#su-bar-wrap', '#su-answer'], { opacity: 0, duration: 0.45, ease: 'power2.in' }, 7.6);
+    t.call(function () { document.getElementById('orb-canvas').dataset.off = ''; }, [], 7.6);
+    t.to(introVideo, { opacity: 0, duration: 1.1, ease: 'power2.inOut' }, 8.3);
+
+    // Hand over mid-flight. The full-screen orb switches on while the intro orb
+    // is still there, sitting at the identical spot and size, so the crossfade
+    // underneath it swaps worlds without the orb itself ever blinking.
+    t.call(function () { gsap.set(mainOrbEl, { opacity: 1 }); }, [], 9.25);
+    t.to(introStage, { opacity: 0, duration: 0.45, ease: 'power1.inOut' }, 9.25);
+    t.call(function () {
+      introStage.style.display = 'none';
+      document.getElementById('intro-orb-canvas').dataset.off = '1';
+      startMainTimeline();
+    }, [], 9.72);
+  }
 }
 </script>
 </body>
