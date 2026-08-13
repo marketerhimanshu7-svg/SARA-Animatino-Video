@@ -269,7 +269,13 @@ body::after {
 
 <div id="intro-stage">
   <div id="video-frame">
-    <video id="intro-video" src="/assets/intro.mp4" muted playsinline preload="auto"></video>
+    <!-- H.264 first, so every normal browser plays the master exactly as before.
+         The WebM is a visually-lossless fallback (~50dB PSNR) purely for builds
+         without an H.264 decoder, e.g. the headless Chromium used to record. -->
+    <video id="intro-video" muted playsinline preload="auto">
+      <source src="/assets/intro.mp4" type="video/mp4">
+      <source src="/assets/intro.webm" type="video/webm">
+    </video>
     <div id="screen-overlay">
       <div id="screen-fill"></div>
       <div id="screen-ui">
@@ -320,7 +326,10 @@ body::after {
   <div class="think-ring" id="think-ring-1"></div>
   <div class="think-ring" id="think-ring-2"></div>
   <div class="think-ring" id="think-ring-3"></div>
-  <video id="orb-video" src="/assets/ieb-orb.mp4" muted loop playsinline autoplay preload="auto"></video>
+  <video id="orb-video" muted loop playsinline autoplay preload="auto">
+    <source src="/assets/ieb-orb.mp4" type="video/mp4">
+    <source src="/assets/ieb-orb.webm" type="video/webm">
+  </video>
   <audio id="type-sample" src="/assets/typing-sample.mp3" preload="auto"></audio>
   <canvas id="orb-canvas" width="320" height="320" data-off="1"></canvas>
 </div>
@@ -403,9 +412,29 @@ body::after {
   <button id="ff-cta">See IEB in Action →</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/assets/gsap.min.js"></script>
 <script>
 'use strict';
+
+// ?slow=N runs the whole piece at 1/N speed — animation, videos and all.
+// It exists for video capture on a machine that cannot paint 60fps live: record
+// the slow run, then speed the footage back up by N, and every frame of the
+// finished 60fps file is a genuinely distinct render instead of a duplicate.
+// Has no effect on the site (no ?slow= means N=1).
+const SLOW = Math.max(1, Number(new URLSearchParams(location.search).get('slow') || 1));
+if (SLOW > 1) {
+  gsap.ticker.lagSmoothing(0);          // never fake-shorten a slow frame
+  gsap.globalTimeline.timeScale(1 / SLOW);
+  // CSS keyframes ignore GSAP's timescale, so slow them by hand — otherwise the
+  // glow waves, caret and breathing would come back 4x too fast after speed-up.
+  const slowCss = function () {
+    document.getAnimations().forEach(function (a) { a.playbackRate = 1 / SLOW; });
+  };
+  window.addEventListener('load', function () {
+    slowCss();
+    [400, 1200, 3000].forEach(function (d) { setTimeout(slowCss, d); });
+  });
+}
 
 // ═══ PERSPECTIVE GRID + NODE NETWORK ═══
 (function () {
@@ -503,6 +532,7 @@ body::after {
   }
   function start() { if (running) return; running = true; tick(); }
   video.addEventListener('loadeddata', start);
+  video.playbackRate = 1 / SLOW;
   video.play().catch(function () {});
   setTimeout(start, 400);
 })();
@@ -743,6 +773,7 @@ document.getElementById('start-gate').addEventListener('click', function () {
   unlockAV();
   const introVideo = document.getElementById('intro-video');
   introVideo.muted = false;
+  introVideo.playbackRate = 1 / SLOW;
   introVideo.play().catch(function () {});
   runIntroSequence();
 }, { once: true });

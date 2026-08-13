@@ -24,6 +24,10 @@ W=1920
 CAP_H=1168          # 1080 of page + room for the browser toolbar; cropped later
 FPS=60
 RUN_SECONDS="${IEB_RUN_SECONDS:-56}"
+# Capture in slow motion, then speed the footage back up. On a box that cannot
+# paint 60fps live this is what makes every output frame a distinct render
+# instead of a duplicate. Set IEB_SLOW=1 on a GPU machine to record real-time.
+SLOW="${IEB_SLOW:-4}"
 
 echo "==> workspace $WORK"
 cleanup() {
@@ -60,7 +64,7 @@ sleep 1
 # ---- capture ---------------------------------------------------------------
 # Captured lossless-ish and fast so no frames are dropped at 60fps; the real
 # encode happens afterwards, off the clock.
-echo "==> capturing ${FPS}fps for ${RUN_SECONDS}s"
+echo "==> capturing ${FPS}fps at 1/${SLOW} speed"
 FF_START="$(date +%s.%N)"
 # No -t here: browser start-up takes an unpredictable few seconds, so ffmpeg
 # runs open-ended and is stopped once the driver has finished the whole run.
@@ -75,9 +79,9 @@ ffmpeg -y -loglevel error -nostdin \
 FFMPEG_PID=$!
 sleep 2
 
-IEB_URL="http://localhost:$PORT/ieb.html?once=1" \
+IEB_URL="http://localhost:$PORT/ieb.html?once=1&slow=$SLOW" \
 IEB_OUT="$WORK" \
-IEB_RUN_SECONDS="$RUN_SECONDS" \
+IEB_RUN_SECONDS="$((RUN_SECONDS * SLOW))" \
 IEB_WIDTH="$((W + 1))" IEB_HEIGHT="$CAP_H" \
 IEB_CHROME="${IEB_CHROME:-}" \
 IEB_SUBS="${IEB_SUBS:-{\}}" \
@@ -93,10 +97,21 @@ CLICK_AT="$(python3 -c "import json;print(json.load(open('$WORK/markers.json'))[
 CHROME_OFF="$(python3 -c "import json;print(json.load(open('$WORK/markers.json'))['chromeOffset'])")"
 START="$(python3 -c "print(max(0.0, $CLICK_AT - $FF_START))")"
 
-echo "==> click at +${START}s, cropping ${CHROME_OFF}px of browser chrome"
+# atempo maxes out at 2x per instance, so chain them to reach SLOW
+ATEMPO="$(python3 -c "
+import math
+s=${SLOW}
+parts=[]
+while s > 2:
+    parts.append('atempo=2.0'); s/=2
+if abs(s-1) > 1e-6: parts.append(f'atempo={s}')
+print(','.join(parts) or 'anull')
+")"
+echo "==> click at +${START}s, crop ${CHROME_OFF}px chrome, speed x${SLOW} (${ATEMPO})"
 ffmpeg -y -loglevel error \
   -ss "$START" -i "$WORK/raw.mkv" \
-  -vf "crop=${W}:1080:0:${CHROME_OFF},fps=${FPS},format=yuv420p" \
+  -vf "crop=${W}:1080:0:${CHROME_OFF},setpts=PTS/${SLOW},fps=${FPS},format=yuv420p" \
+  -af "${ATEMPO}" \
   -c:v libx264 -preset slow -crf 17 -profile:v high -level 4.2 \
   -x264-params "keyint=120:min-keyint=60" \
   -c:a aac -b:a 192k -ar 48000 \

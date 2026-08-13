@@ -52,7 +52,7 @@ That prints the number of *unique* frames. Compare it against
 `duration × 60`; if it is far below, the render was GPU-starved, not the
 capture.
 
-`IEB_SUBS` exists for the same class of problem: a Chromium build without an
+The page carries WebM fallbacks (`assets/*.webm`) after the MP4 sources, so a Chromium without an H.264 decoder still plays the real in-repo assets — nothing is substituted at capture time.
 H.264 decoder can't play `assets/*.mp4`, so you can hand it WebM copies:
 
 ```bash
